@@ -24,10 +24,15 @@ func main() {
 		panic("config.yml is invalid")
 	}
 
+	common.APIKey = configYaml.Key
+
 	common.LoadMongo(configYaml.MongoUri)
 	common.LoadRedis(configYaml.RedisUri)
 
-	server.Service().LoadAll()
+	database := common.MongoClient.Database("api")
+
+	server.Service().LoadGroups(database)
+	server.Service().LoadServers(database)
 
 	router := mux.NewRouter().StrictSlash(true)
 

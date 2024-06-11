@@ -11,5 +11,5 @@ func LoadAll(router *mux.Router) {
 	router.HandleFunc("/apiv2/servers/{id}/down", server_routes.ServerDownRoute).Methods("PATCH")
 	router.HandleFunc("/apiv2/servers/{id}/tick", server_routes.ServerTickRoute).Methods("PATCH")
 
-	router.HandleFunc("/apiv2/servers/groups/lookup", server_routes.GroupLookupRoute).Methods("GET")
+	router.HandleFunc("/apiv2/servers/{id}/groups/lookup", server_routes.GroupLookupRoute).Methods("GET")
 }

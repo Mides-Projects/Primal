@@ -1,12 +1,13 @@
 package middleware
 
 import (
+	"github.com/holypvp/primal/common"
 	"net/http"
 )
 
 func HandleAuth(w http.ResponseWriter, r *http.Request) bool {
 	apiKey := r.Header.Get("X-API-KEY")
-	if apiKey == "superuser" {
+	if apiKey == common.APIKey {
 		return true
 	}
 

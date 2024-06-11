@@ -11,6 +11,7 @@ import (
 var (
 	RedisClient *redis.Client = nil
 	MongoClient *mongo.Client = nil
+	APIKey      string
 )
 
 func LoadRedis(redisUrl string) {

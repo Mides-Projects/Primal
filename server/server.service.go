@@ -2,10 +2,10 @@ package server
 
 import (
 	"context"
-	"fmt"
-	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/server/model"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"log"
 	"strings"
 	"sync"
 )
@@ -132,9 +132,7 @@ func Service() *ServerService {
 	return instance
 }
 
-func (service *ServerService) LoadAll() {
-	database := common.MongoClient.Database("api")
-
+func (service *ServerService) LoadGroups(database *mongo.Database) {
 	// serversCollection := database.Collection("servers")
 	groupsCollection := database.Collection("serverGroups")
 
@@ -172,5 +170,48 @@ func (service *ServerService) LoadAll() {
 		panic(err)
 	}
 
-	fmt.Printf("Successfully loaded %d server groups\n", len(groups))
+	log.Printf("Successfully loaded %d server groups\n\n", len(groups))
+}
+
+func (service *ServerService) LoadServers(database *mongo.Database) {
+	serversCollection := database.Collection("servers")
+	cursor, err := serversCollection.Find(context.TODO(), bson.D{{}})
+	if err != nil {
+		panic(err)
+	}
+
+	for cursor.Next(context.Background()) {
+		var result = &model.ServerInfoModel{}
+		err := cursor.Decode(result)
+		if err != nil {
+			log.Println("Failed to decode server info model: ", err)
+
+			continue
+		}
+
+		service.AppendServer(&ServerInfo{
+			id:     result.Id,
+			port:   result.Port,
+			groups: result.Groups,
+
+			maxSlots:    result.MaxSlots,
+			heartbeat:   result.Heartbeat,
+			bungeeCord:  result.BungeeCord,
+			onlineMode:  result.OnlineMode,
+			initialTime: result.InitialTime,
+		})
+	}
+
+	if err := cursor.Err(); err != nil {
+		panic(err)
+
+		return
+	}
+
+	err = cursor.Close(context.TODO())
+	if err != nil {
+		panic(err)
+	}
+
+	log.Printf("Successfully loaded %d servers\n", len(servers))
 }
