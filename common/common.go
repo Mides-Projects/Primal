@@ -9,9 +9,10 @@ import (
 )
 
 var (
-	RedisClient *redis.Client = nil
-	MongoClient *mongo.Client = nil
-	APIKey      string
+	RedisClient  *redis.Client = nil
+	MongoClient  *mongo.Client = nil
+	RedisChannel string
+	APIKey       string
 )
 
 func LoadRedis(redisUrl string) {

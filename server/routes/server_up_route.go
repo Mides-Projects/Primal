@@ -7,29 +7,30 @@ import (
 	"github.com/holypvp/primal/common/middleware"
 	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/pubsub"
+	"log"
 	"net/http"
 )
 
-func ServerDownRoute(w http.ResponseWriter, r *http.Request) {
+func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 	if !middleware.HandleAuth(w, r) {
 		return
 	}
 
-	id, ok := mux.Vars(r)["id"]
+	serverId, ok := mux.Vars(r)["id"]
 	if !ok {
 		http.Error(w, "No ID found", http.StatusBadRequest)
 
 		return
 	}
 
-	serverInfo := server.Service().LookupById(id)
+	serverInfo := server.Service().LookupById(serverId)
 	if serverInfo == nil {
-		http.Error(w, "Server not found", http.StatusNotFound)
-
-		return
+		log.Println("Server not found... Failed to start server " + serverId)
 	}
 
-	payload, err := common.WrapPayload("API_SERVER_DOWN", pubsub.NewServerStatusPacket(serverInfo.Id()))
+	log.Print("Server " + serverId + " was started!")
+
+	payload, err := common.WrapPayload("API_SERVER_UP", pubsub.NewServerStatusPacket(serverId))
 	if err != nil {
 		http.Error(w, "Failed to marshal packet", http.StatusInternalServerError)
 

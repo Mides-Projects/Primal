@@ -6,7 +6,7 @@ import (
 )
 
 func HandleAuth(w http.ResponseWriter, r *http.Request) bool {
-	apiKey := r.Header.Get("X-API-KEY")
+	apiKey := r.Header.Get("API-Key")
 	if apiKey == common.APIKey {
 		return true
 	}

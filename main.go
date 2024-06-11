@@ -24,6 +24,7 @@ func main() {
 		panic("config.yml is invalid")
 	}
 
+	common.RedisChannel = configYaml.RedisChannel
 	common.APIKey = configYaml.Key
 
 	common.LoadMongo(configYaml.MongoUri)

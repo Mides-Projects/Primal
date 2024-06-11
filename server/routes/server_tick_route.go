@@ -8,6 +8,7 @@ import (
 	"github.com/holypvp/primal/common/middleware"
 	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/response"
+	"log"
 	"net/http"
 )
 
@@ -67,12 +68,14 @@ func ServerTickRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = common.RedisClient.Publish(context.Background(), "apiv2", payload).Err()
+	err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
 	if err != nil {
 		http.Error(w, "Failed to publish packet", http.StatusInternalServerError)
 
 		return
 	}
+
+	log.Print("Server " + id + " was ticked!")
 
 	w.WriteHeader(http.StatusOK)
 }

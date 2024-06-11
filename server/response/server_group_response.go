@@ -1,7 +1,7 @@
 package response
 
 type ServerGroupResponse struct {
-	Id                    string                 `json:"_id"`
+	Id                    string                 `json:"id"`
 	Metadata              map[string]interface{} `json:"metadata"`
 	Announcements         []string               `json:"announcements"`
 	AnnouncementsInterval int64                  `json:"announcements_interval"`
