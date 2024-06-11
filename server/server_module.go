@@ -83,7 +83,7 @@ func (m *ServerModule) Values() []*ServerInfo {
 func LoadAll(router *mux.Router) {
 	router.HandleFunc("/api/v2/servers/lookup", routes.LookupServers).Methods("GET")
 	router.HandleFunc("/api/v2/servers/{id}/down", routes.ServerDownRoute).Methods("POST")
-	router.HandleFunc("/api/v2/servers/{id}/tick", routes.ServerDownRoute).Methods("PATCH")
+	router.HandleFunc("/api/v2/servers/{id}/tick", routes.ServerTickRoute).Methods("PATCH")
 }
 
 func Module() *ServerModule {
