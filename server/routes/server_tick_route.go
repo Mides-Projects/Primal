@@ -23,7 +23,7 @@ func ServerTickRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	serverInfo := server.Module().LookupById(id)
+	serverInfo := server.Service().LookupById(id)
 	if serverInfo == nil {
 		http.Error(w, "Server not found", http.StatusNotFound)
 

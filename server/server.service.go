@@ -1,8 +1,6 @@
 package server
 
 import (
-	"github.com/gorilla/mux"
-	"github.com/holypvp/primal/server/routes"
 	"sync"
 )
 
@@ -13,12 +11,12 @@ var (
 	servers       = map[string]*ServerInfo{}
 	serversByPort = map[int64]string{}
 
-	instance *ServerModule
+	instance *ServerService
 )
 
-type ServerModule struct{}
+type ServerService struct{}
 
-func (m *ServerModule) LookupById(id string) *ServerInfo {
+func (m *ServerService) LookupById(id string) *ServerInfo {
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -30,7 +28,7 @@ func (m *ServerModule) LookupById(id string) *ServerInfo {
 	return serverInfo
 }
 
-func (m *ServerModule) LookupByPort(port int64) *ServerInfo {
+func (m *ServerService) LookupByPort(port int64) *ServerInfo {
 	portMutex.Lock()
 	defer portMutex.Unlock()
 
@@ -42,7 +40,7 @@ func (m *ServerModule) LookupByPort(port int64) *ServerInfo {
 	return m.LookupById(id)
 }
 
-func (m *ServerModule) Append(serverInfo *ServerInfo) {
+func (m *ServerService) Append(serverInfo *ServerInfo) {
 	mutex.Lock()
 	servers[serverInfo.Id()] = serverInfo
 	mutex.Unlock()
@@ -52,7 +50,7 @@ func (m *ServerModule) Append(serverInfo *ServerInfo) {
 	portMutex.Unlock()
 }
 
-func (m *ServerModule) Destroy(serverId string) {
+func (m *ServerService) Destroy(serverId string) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -68,7 +66,7 @@ func (m *ServerModule) Destroy(serverId string) {
 	delete(serversByPort, serverInfo.Port())
 }
 
-func (m *ServerModule) Values() []*ServerInfo {
+func (m *ServerService) Values() []*ServerInfo {
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -80,15 +78,9 @@ func (m *ServerModule) Values() []*ServerInfo {
 	return values
 }
 
-func LoadAll(router *mux.Router) {
-	router.HandleFunc("/api/v2/servers/lookup", routes.LookupServers).Methods("GET")
-	router.HandleFunc("/api/v2/servers/{id}/down", routes.ServerDownRoute).Methods("POST")
-	router.HandleFunc("/api/v2/servers/{id}/tick", routes.ServerTickRoute).Methods("PATCH")
-}
-
-func Module() *ServerModule {
+func Service() *ServerService {
 	if instance == nil {
-		instance = &ServerModule{}
+		instance = &ServerService{}
 	}
 
 	return instance

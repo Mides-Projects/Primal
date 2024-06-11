@@ -12,7 +12,7 @@ func LookupServers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := json.NewEncoder(w).Encode(server.Module().Values())
+	err := json.NewEncoder(w).Encode(server.Service().Values())
 	if err == nil {
 		return
 	}

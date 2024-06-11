@@ -6,16 +6,17 @@ import (
 
 func HandleAuth(w http.ResponseWriter, r *http.Request) bool {
 	apiKey := r.Header.Get("X-API-KEY")
-	if apiKey == "" {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return false
+	if apiKey == "superuser" {
+		return true
 	}
 
-	if apiKey != "supersecret" {
+	if apiKey == "" {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 
 		return false
 	}
 
-	return true
+	http.Error(w, "Unauthorized", http.StatusUnauthorized)
+
+	return false
 }
