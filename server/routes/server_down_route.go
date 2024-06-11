@@ -2,7 +2,6 @@ package routes
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/common/middleware"
@@ -30,17 +29,14 @@ func ServerDownRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Mark the server as down
-	// TODO: Send a redis packet to all servers to update their server list
-
-	result, err := json.Marshal(pubsub.NewServerDownPacket(serverInfo.Id()))
+	payload, err := common.WrapPayload("API_SERVER_DOWN", pubsub.NewServerDownPacket(serverInfo.Id()))
 	if err != nil {
 		http.Error(w, "Failed to marshal packet", http.StatusInternalServerError)
 
 		return
 	}
 
-	err = common.RedisClient.Publish(context.Background(), "apiv2", result).Err()
+	err = common.RedisClient.Publish(context.Background(), "apiv2", payload).Err()
 	if err != nil {
 		http.Error(w, "Failed to publish packet", http.StatusInternalServerError)
 

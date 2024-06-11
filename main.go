@@ -1,31 +1,30 @@
 package main
 
 import (
-	"flag"
 	"github.com/gorilla/mux"
 	"github.com/holypvp/primal/common"
+	"github.com/holypvp/primal/common/config"
 	"github.com/holypvp/primal/common/loader"
+	"gopkg.in/yaml.v2"
 	"log"
 	"net/http"
+	"os"
 )
 
 func main() {
-	uri := *flag.String("uri", "null", "uri")
-	redisUrl := *flag.String("redis", "null", "redis")
-	port := *flag.String("port", "3001", "port")
-
-	flag.Parse()
-
-	if uri == "null" {
-		panic("uri is required")
+	file, err := os.ReadFile("config.yml")
+	if err != nil {
+		panic("config.yml not found")
 	}
 
-	if redisUrl == "null" {
-		panic("redis is required")
+	configYaml := &config.Yaml{}
+	err = yaml.Unmarshal(file, configYaml)
+	if err != nil {
+		panic("config.yml is invalid")
 	}
 
-	common.LoadMongo(uri)
-	common.LoadRedis(redisUrl)
+	common.LoadMongo(configYaml.MongoUri)
+	common.LoadRedis(configYaml.RedisUri)
 
 	router := mux.NewRouter().StrictSlash(true)
 
@@ -38,7 +37,7 @@ func main() {
 	// to pass in our newly created router as the second
 	// argument
 
-	log.Println("App is running on port " + port + "...")
+	log.Println("App is running on port " + configYaml.Port + "...")
 
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	log.Fatal(http.ListenAndServe(":"+configYaml.Port, router))
 }

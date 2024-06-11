@@ -6,7 +6,8 @@ import (
 )
 
 func LoadAll(router *mux.Router) {
-	router.HandleFunc("/api/v2/servers/lookup", server_routes.LookupServers).Methods("GET")
-	router.HandleFunc("/api/v2/servers/{id}/down", server_routes.ServerDownRoute).Methods("POST")
-	router.HandleFunc("/api/v2/servers/{id}/tick", server_routes.ServerTickRoute).Methods("PATCH")
+	router.HandleFunc("/apiv2/servers/{id}/create/{port}", server_routes.ServerCreateRoute).Methods("POST")
+	router.HandleFunc("/apiv2/servers/lookup", server_routes.LookupServers).Methods("GET")
+	router.HandleFunc("/apiv2/servers/{id}/down", server_routes.ServerDownRoute).Methods("PATCH")
+	router.HandleFunc("/apiv2/servers/{id}/tick", server_routes.ServerTickRoute).Methods("PATCH")
 }

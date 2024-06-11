@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -45,4 +46,8 @@ func LoadMongo(uri string) {
 	}
 
 	MongoClient = client
+}
+
+func WrapPayload(pid string, payload interface{}) ([]byte, error) {
+	return json.Marshal(NewPayload(pid, 0, payload))
 }

@@ -1,8 +1,10 @@
 package routes
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/gorilla/mux"
+	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/common/middleware"
 	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/response"
@@ -38,10 +40,38 @@ func ServerTickRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	serverInfo.ClearGroups()
+	serverInfo.SetGroups(result.Groups)
+	serverInfo.SetPlayersCount(result.PlayersCount)
+	serverInfo.SetPort(result.Port)
 
-	for _, group := range result.Groups {
-		serverInfo.AddGroup(group)
+	serverInfo.SetHeartbeat(result.Heartbeat)
+	serverInfo.SetBungeeCord(result.BungeeCord)
+	serverInfo.SetOnlineMode(result.OnlineMode)
+
+	serverInfo.SetActiveThreads(result.ActiveThreads)
+	serverInfo.SetDaemonThreads(result.DaemonThreads)
+
+	serverInfo.SetMotd(result.Motd)
+	serverInfo.SetTicksPerSecond(result.TicksPerSecond)
+	serverInfo.SetDirectory(result.Directory)
+	serverInfo.SetFullTicks(result.FullTicks)
+	serverInfo.SetMaxSlots(result.MaxSlots)
+	serverInfo.SetInitialTime(result.InitialTime)
+	serverInfo.SetPlugins(result.Plugins)
+	serverInfo.SetPlayers(result.Players)
+
+	payload, err := common.WrapPayload("API_SERVER_TICK", result)
+	if err != nil {
+		http.Error(w, "Failed to marshal packet", http.StatusInternalServerError)
+
+		return
+	}
+
+	err = common.RedisClient.Publish(context.Background(), "apiv2", payload).Err()
+	if err != nil {
+		http.Error(w, "Failed to publish packet", http.StatusInternalServerError)
+
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
