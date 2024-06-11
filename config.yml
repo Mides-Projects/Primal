@@ -1,3 +1,5 @@
 mongodb-uri: "mongodb://localhost:27017"
 redis-uri: "redis://localhost:6379"
 port: 3001
+
+key: "4e8b69b5-0764-4a40-b75a-26f62de12433"

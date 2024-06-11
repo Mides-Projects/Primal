@@ -5,6 +5,7 @@ import (
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/common/config"
 	"github.com/holypvp/primal/common/loader"
+	"github.com/holypvp/primal/server"
 	"gopkg.in/yaml.v2"
 	"log"
 	"net/http"
@@ -25,6 +26,8 @@ func main() {
 
 	common.LoadMongo(configYaml.MongoUri)
 	common.LoadRedis(configYaml.RedisUri)
+
+	server.Service().LoadAll()
 
 	router := mux.NewRouter().StrictSlash(true)
 

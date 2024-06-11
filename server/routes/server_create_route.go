@@ -67,7 +67,7 @@ func ServerCreateRoute(w http.ResponseWriter, r *http.Request) {
 	}
 
 	serverInfo = server.NewServerInfo(serverId, portNum)
-	server.Service().Append(serverInfo)
+	server.Service().AppendServer(serverInfo)
 
 	w.WriteHeader(http.StatusOK)
 }

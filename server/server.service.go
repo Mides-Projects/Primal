@@ -1,26 +1,35 @@
 package server
 
 import (
+	"context"
+	"fmt"
+	"github.com/holypvp/primal/common"
+	"github.com/holypvp/primal/server/model"
+	"go.mongodb.org/mongo-driver/bson"
+	"strings"
 	"sync"
 )
 
 var (
-	mutex     sync.Mutex
-	portMutex sync.Mutex
+	serversMutex sync.Mutex
+	groupsMutex  sync.Mutex
+	portMutex    sync.Mutex
 
 	servers       = map[string]*ServerInfo{}
 	serversByPort = map[int64]string{}
+
+	groups = map[string]*ServerGroup{}
 
 	instance *ServerService
 )
 
 type ServerService struct{}
 
-func (m *ServerService) LookupById(id string) *ServerInfo {
-	mutex.Lock()
-	defer mutex.Unlock()
+func (service *ServerService) LookupById(id string) *ServerInfo {
+	serversMutex.Lock()
+	defer serversMutex.Unlock()
 
-	serverInfo, ok := servers[id]
+	serverInfo, ok := servers[strings.ToLower(id)]
 	if !ok {
 		return nil
 	}
@@ -28,7 +37,7 @@ func (m *ServerService) LookupById(id string) *ServerInfo {
 	return serverInfo
 }
 
-func (m *ServerService) LookupByPort(port int64) *ServerInfo {
+func (service *ServerService) LookupByPort(port int64) *ServerInfo {
 	portMutex.Lock()
 	defer portMutex.Unlock()
 
@@ -37,24 +46,24 @@ func (m *ServerService) LookupByPort(port int64) *ServerInfo {
 		return nil
 	}
 
-	return m.LookupById(id)
+	return service.LookupById(id)
 }
 
-func (m *ServerService) Append(serverInfo *ServerInfo) {
-	mutex.Lock()
-	servers[serverInfo.Id()] = serverInfo
-	mutex.Unlock()
+func (service *ServerService) AppendServer(serverInfo *ServerInfo) {
+	serversMutex.Lock()
+	servers[strings.ToLower(serverInfo.Id())] = serverInfo
+	serversMutex.Unlock()
 
 	portMutex.Lock()
 	serversByPort[serverInfo.Port()] = serverInfo.Id()
 	portMutex.Unlock()
 }
 
-func (m *ServerService) Destroy(serverId string) {
-	mutex.Lock()
-	defer mutex.Unlock()
+func (service *ServerService) DestroyServer(serverId string) {
+	serversMutex.Lock()
+	defer serversMutex.Unlock()
 
-	serverInfo, ok := servers[serverId]
+	serverInfo, ok := servers[strings.ToLower(serverId)]
 	if !ok {
 		return
 	}
@@ -62,17 +71,54 @@ func (m *ServerService) Destroy(serverId string) {
 	portMutex.Lock()
 	defer portMutex.Unlock()
 
-	delete(servers, serverId)
+	delete(servers, strings.ToLower(serverId))
 	delete(serversByPort, serverInfo.Port())
 }
 
-func (m *ServerService) Values() []*ServerInfo {
-	mutex.Lock()
-	defer mutex.Unlock()
+func (service *ServerService) Servers() []*ServerInfo {
+	serversMutex.Lock()
+	defer serversMutex.Unlock()
 
 	values := make([]*ServerInfo, 0, len(servers))
 	for _, serverInfo := range servers {
 		values = append(values, serverInfo)
+	}
+
+	return values
+}
+
+func (service *ServerService) LookupGroup(name string) *ServerGroup {
+	groupsMutex.Lock()
+	defer groupsMutex.Unlock()
+
+	group, ok := groups[strings.ToLower(name)]
+	if !ok {
+		return nil
+	}
+
+	return group
+}
+
+func (service *ServerService) AppendGroup(group *ServerGroup) {
+	groupsMutex.Lock()
+	groups[strings.ToLower(group.Id())] = group
+	groupsMutex.Unlock()
+}
+
+func (service *ServerService) DestroyGroup(name string) {
+	groupsMutex.Lock()
+	defer groupsMutex.Unlock()
+
+	delete(groups, strings.ToLower(name))
+}
+
+func (service *ServerService) Groups() []*ServerGroup {
+	groupsMutex.Lock()
+	defer groupsMutex.Unlock()
+
+	values := make([]*ServerGroup, 0, len(groups))
+	for _, group := range groups {
+		values = append(values, group)
 	}
 
 	return values
@@ -84,4 +130,47 @@ func Service() *ServerService {
 	}
 
 	return instance
+}
+
+func (service *ServerService) LoadAll() {
+	database := common.MongoClient.Database("api")
+
+	// serversCollection := database.Collection("servers")
+	groupsCollection := database.Collection("serverGroups")
+
+	cursor, err := groupsCollection.Find(context.TODO(), bson.D{{}})
+	if err != nil {
+		panic(err)
+	}
+
+	for cursor.Next(context.Background()) {
+		var result = &model.ServerGroupModel{}
+		err := cursor.Decode(result)
+		if err != nil {
+			panic(err)
+
+			return
+		}
+
+		service.AppendGroup(&ServerGroup{
+			id:                    result.Id,
+			metadata:              result.Metadata,
+			announcements:         result.Announcements,
+			announcementsInterval: result.AnnouncementsInterval,
+			fallbackServerId:      result.FallbackServerId,
+		})
+	}
+
+	if err := cursor.Err(); err != nil {
+		panic(err)
+
+		return
+	}
+
+	err = cursor.Close(context.TODO())
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Successfully loaded %d server groups\n", len(groups))
 }
