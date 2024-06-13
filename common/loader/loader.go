@@ -3,6 +3,7 @@ package loader
 import (
 	"github.com/gorilla/mux"
 	server_routes "github.com/holypvp/primal/server/routes"
+	"github.com/holypvp/primal/server/routes/group"
 )
 
 func LoadAll(router *mux.Router) {
@@ -12,5 +13,5 @@ func LoadAll(router *mux.Router) {
 	router.HandleFunc("/apiv2/servers/{id}/up", server_routes.ServerUpRoute).Methods("PATCH")
 	router.HandleFunc("/apiv2/servers/{id}/tick", server_routes.ServerTickRoute).Methods("PATCH")
 
-	router.HandleFunc("/apiv2/servers/{id}/groups/lookup", server_routes.GroupLookupRoute).Methods("GET")
+	router.HandleFunc("/apiv2/servers/{id}/groups/lookup", group.GroupLookupRoute).Methods("GET")
 }

@@ -32,12 +32,41 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	bungeeMode := r.URL.Query().Get("bungee")
+	if bungeeMode == "" {
+		http.Error(w, "Bungee mode is required", http.StatusBadRequest)
+
+		return
+	}
+
+	if bungeeMode != "true" && bungeeMode != "false" {
+		http.Error(w, "Invalid bungee mode", http.StatusBadRequest)
+
+		return
+	}
+
+	onlineMode := r.URL.Query().Get("online")
+	if onlineMode == "" {
+		http.Error(w, "Online mode is required", http.StatusBadRequest)
+
+		return
+	}
+
+	if onlineMode != "true" && onlineMode != "false" {
+		http.Error(w, "Invalid online mode", http.StatusBadRequest)
+
+		return
+	}
+
 	initialTime := serverInfo.InitialTime()
 	if initialTime == 0 {
 		http.Error(w, "Server was never down", http.StatusBadRequest)
 
 		return
 	}
+
+	serverInfo.SetBungeeCord(bungeeMode == "true")
+	serverInfo.SetOnlineMode(onlineMode == "true")
 
 	now := time.Now().UnixMilli()
 	serverInfo.SetInitialTime(now)

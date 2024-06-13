@@ -22,9 +22,9 @@ func LookupServers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var serversResponse []response.ServerInfoResponse
+	var responses []response.ServerInfoResponse
 	for _, serverInfo := range server.Service().Servers() {
-		serversResponse = append(serversResponse, response.ServerInfoResponse{
+		responses = append(responses, response.ServerInfoResponse{
 			Id:             serverInfo.Id(),
 			Port:           serverInfo.Port(),
 			Groups:         serverInfo.Groups(),
@@ -45,11 +45,11 @@ func LookupServers(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	if serversResponse == nil {
-		serversResponse = []response.ServerInfoResponse{}
+	if responses == nil {
+		responses = []response.ServerInfoResponse{}
 	}
 
-	err := json.NewEncoder(w).Encode(serversResponse)
+	err := json.NewEncoder(w).Encode(responses)
 	if err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 
