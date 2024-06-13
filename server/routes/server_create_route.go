@@ -64,16 +64,7 @@ func ServerCreateRoute(w http.ResponseWriter, r *http.Request) {
 	server.Service().AppendServer(serverInfo)
 
 	// Save the model into MongoDB but in a goroutine, so it doesn't block the main thread
-	go server.SaveModel(model.ServerInfoModel{
-		Id:          serverInfo.Id(),
-		Port:        serverInfo.Port(),
-		Groups:      serverInfo.Groups(),
-		MaxSlots:    serverInfo.MaxSlots(),
-		Heartbeat:   serverInfo.Heartbeat(),
-		BungeeCord:  serverInfo.BungeeCord(),
-		OnlineMode:  serverInfo.OnlineMode(),
-		InitialTime: serverInfo.InitialTime(),
-	})
+	go server.SaveModel(model.WrapServerInfo(serverInfo))
 
 	err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
 	if err != nil {

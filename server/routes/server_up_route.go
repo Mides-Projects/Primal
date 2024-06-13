@@ -6,6 +6,7 @@ import (
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/common/middleware"
 	"github.com/holypvp/primal/server"
+	"github.com/holypvp/primal/server/model"
 	"github.com/holypvp/primal/server/pubsub"
 	"log"
 	"net/http"
@@ -40,6 +41,9 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 
 	now := time.Now().UnixMilli()
 	serverInfo.SetInitialTime(now)
+
+	// Save the server model in a goroutine to avoid blocking the main thread
+	go server.SaveModel(model.WrapServerInfo(serverInfo))
 
 	log.Printf("[ServerUpRoute] Server %s is now back up. After %d ms", serverId, now-initialTime)
 

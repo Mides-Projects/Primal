@@ -33,8 +33,6 @@ func ServerTickRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: No longer using this
-	// Instead, we going to use server_info_response.go
 	body := &request.ServerTickBody{}
 	err := json.NewDecoder(r.Body).Decode(body)
 	if err != nil {
@@ -77,7 +75,7 @@ func ServerTickRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Print("Server " + id + " was ticked!")
+	log.Printf("Successfully updated server tick for %s\n", id)
 
 	w.WriteHeader(http.StatusOK)
 }
