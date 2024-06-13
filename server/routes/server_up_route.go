@@ -9,6 +9,7 @@ import (
 	"github.com/holypvp/primal/server/pubsub"
 	"log"
 	"net/http"
+	"time"
 )
 
 func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
@@ -25,10 +26,22 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 
 	serverInfo := server.Service().LookupById(serverId)
 	if serverInfo == nil {
-		log.Println("Server not found... Failed to start server " + serverId)
+		http.Error(w, "Server not found", http.StatusBadRequest)
+
+		return
 	}
 
-	log.Print("Server " + serverId + " was started!")
+	initialTime := serverInfo.InitialTime()
+	if initialTime == 0 {
+		http.Error(w, "Server was never down", http.StatusBadRequest)
+
+		return
+	}
+
+	now := time.Now().UnixMilli()
+	serverInfo.SetInitialTime(now)
+
+	log.Printf("[ServerUpRoute] Server %s is now back up. After %d ms", serverId, now-initialTime)
 
 	payload, err := common.WrapPayload("API_SERVER_UP", pubsub.NewServerStatusPacket(serverId))
 	if err != nil {

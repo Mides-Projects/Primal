@@ -7,7 +7,7 @@ import (
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/common/middleware"
 	"github.com/holypvp/primal/server"
-	"github.com/holypvp/primal/server/response"
+	"github.com/holypvp/primal/server/request"
 	"log"
 	"net/http"
 )
@@ -33,35 +33,37 @@ func ServerTickRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := &response.ServerTickRequest{}
-	err := json.NewDecoder(r.Body).Decode(result)
+	// TODO: No longer using this
+	// Instead, we going to use server_info_response.go
+	body := &request.ServerTickBody{}
+	err := json.NewDecoder(r.Body).Decode(body)
 	if err != nil {
 		http.Error(w, "Failed to parse request body", http.StatusBadRequest)
 
 		return
 	}
 
-	serverInfo.SetGroups(result.Groups)
-	serverInfo.SetPlayersCount(result.PlayersCount)
-	serverInfo.SetPort(result.Port)
+	// serverInfo.SetGroups(body.Groups)
+	serverInfo.SetPlayersCount(body.PlayersCount)
+	// serverInfo.SetPort(body.Port)
 
-	serverInfo.SetHeartbeat(result.Heartbeat)
-	serverInfo.SetBungeeCord(result.BungeeCord)
-	serverInfo.SetOnlineMode(result.OnlineMode)
+	serverInfo.SetHeartbeat(body.Heartbeat)
+	// serverInfo.SetBungeeCord(body.BungeeCord)
+	// serverInfo.SetOnlineMode(body.OnlineMode)
 
-	serverInfo.SetActiveThreads(result.ActiveThreads)
-	serverInfo.SetDaemonThreads(result.DaemonThreads)
+	serverInfo.SetActiveThreads(body.ActiveThreads)
+	serverInfo.SetDaemonThreads(body.DaemonThreads)
 
-	serverInfo.SetMotd(result.Motd)
-	serverInfo.SetTicksPerSecond(result.TicksPerSecond)
-	serverInfo.SetDirectory(result.Directory)
-	serverInfo.SetFullTicks(result.FullTicks)
-	serverInfo.SetMaxSlots(result.MaxSlots)
-	serverInfo.SetInitialTime(result.InitialTime)
-	serverInfo.SetPlugins(result.Plugins)
-	serverInfo.SetPlayers(result.Players)
+	// serverInfo.SetMotd(body.Motd)
+	serverInfo.SetTicksPerSecond(body.TicksPerSecond)
+	// serverInfo.SetDirectory(body.Directory)
+	serverInfo.SetFullTicks(body.FullTicks)
+	// serverInfo.SetMaxSlots(body.MaxSlots)
+	// serverInfo.SetInitialTime(body.InitialTime)
+	// serverInfo.SetPlugins(body.Plugins)
+	serverInfo.SetPlayers(body.Players)
 
-	payload, err := common.WrapPayload("API_SERVER_TICK", result)
+	payload, err := common.WrapPayload("API_SERVER_TICK", body)
 	if err != nil {
 		http.Error(w, "Failed to marshal packet", http.StatusInternalServerError)
 

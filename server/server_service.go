@@ -20,6 +20,9 @@ var (
 
 	groups = map[string]*ServerGroup{}
 
+	serversCollection *mongo.Collection
+	groupsCollection  *mongo.Collection
+
 	instance *ServerService
 )
 
@@ -132,8 +135,24 @@ func Service() *ServerService {
 	return instance
 }
 
+func SaveModel(infoModel model.ServerInfoModel) {
+	if serversCollection == nil {
+		log.Fatal("Servers collection is nil")
+	}
+
+	_, err := serversCollection.InsertOne(context.TODO(), infoModel)
+	if err == nil {
+		return
+	}
+
+	log.Fatal(err)
+}
+
 func (service *ServerService) LoadGroups(database *mongo.Database) {
-	// serversCollection := database.Collection("servers")
+	if groupsCollection != nil {
+		log.Fatal("Groups collection is already set")
+	}
+
 	groupsCollection := database.Collection("serverGroups")
 
 	cursor, err := groupsCollection.Find(context.TODO(), bson.D{{}})

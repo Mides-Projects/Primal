@@ -43,7 +43,6 @@ func LookupServers(w http.ResponseWriter, r *http.Request) {
 			InitialTime:    serverInfo.InitialTime(),
 			Plugins:        serverInfo.Plugins(),
 		})
-
 	}
 
 	if serversResponse == nil {
