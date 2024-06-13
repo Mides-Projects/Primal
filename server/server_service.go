@@ -11,14 +11,14 @@ import (
 )
 
 var (
-	serversMutex sync.Mutex
-	groupsMutex  sync.Mutex
-	portMutex    sync.Mutex
+	serversMu sync.Mutex
+	groupsMu  sync.Mutex
+	portMu    sync.Mutex
 
-	servers       = map[string]*ServerInfo{}
+	serversMap    = map[string]*ServerInfo{}
 	serversByPort = map[int64]string{}
 
-	groups = map[string]*ServerGroup{}
+	groupsMap = map[string]*ServerGroup{}
 
 	serversCollection *mongo.Collection
 	groupsCollection  *mongo.Collection
@@ -29,10 +29,10 @@ var (
 type ServerService struct{}
 
 func (service *ServerService) LookupById(id string) *ServerInfo {
-	serversMutex.Lock()
-	defer serversMutex.Unlock()
+	serversMu.Lock()
+	defer serversMu.Unlock()
 
-	serverInfo, ok := servers[strings.ToLower(id)]
+	serverInfo, ok := serversMap[strings.ToLower(id)]
 	if !ok {
 		return nil
 	}
@@ -41,8 +41,8 @@ func (service *ServerService) LookupById(id string) *ServerInfo {
 }
 
 func (service *ServerService) LookupByPort(port int64) *ServerInfo {
-	portMutex.Lock()
-	defer portMutex.Unlock()
+	portMu.Lock()
+	defer portMu.Unlock()
 
 	id, ok := serversByPort[port]
 	if !ok {
@@ -53,37 +53,37 @@ func (service *ServerService) LookupByPort(port int64) *ServerInfo {
 }
 
 func (service *ServerService) AppendServer(serverInfo *ServerInfo) {
-	serversMutex.Lock()
-	servers[strings.ToLower(serverInfo.Id())] = serverInfo
-	serversMutex.Unlock()
+	serversMu.Lock()
+	serversMap[strings.ToLower(serverInfo.Id())] = serverInfo
+	serversMu.Unlock()
 
-	portMutex.Lock()
+	portMu.Lock()
 	serversByPort[serverInfo.Port()] = serverInfo.Id()
-	portMutex.Unlock()
+	portMu.Unlock()
 }
 
 func (service *ServerService) DestroyServer(serverId string) {
-	serversMutex.Lock()
-	defer serversMutex.Unlock()
+	serversMu.Lock()
+	defer serversMu.Unlock()
 
-	serverInfo, ok := servers[strings.ToLower(serverId)]
+	serverInfo, ok := serversMap[strings.ToLower(serverId)]
 	if !ok {
 		return
 	}
 
-	portMutex.Lock()
-	defer portMutex.Unlock()
+	portMu.Lock()
+	defer portMu.Unlock()
 
-	delete(servers, strings.ToLower(serverId))
+	delete(serversMap, strings.ToLower(serverId))
 	delete(serversByPort, serverInfo.Port())
 }
 
 func (service *ServerService) Servers() []*ServerInfo {
-	serversMutex.Lock()
-	defer serversMutex.Unlock()
+	serversMu.Lock()
+	defer serversMu.Unlock()
 
-	values := make([]*ServerInfo, 0, len(servers))
-	for _, serverInfo := range servers {
+	values := make([]*ServerInfo, 0, len(serversMap))
+	for _, serverInfo := range serversMap {
 		values = append(values, serverInfo)
 	}
 
@@ -91,10 +91,10 @@ func (service *ServerService) Servers() []*ServerInfo {
 }
 
 func (service *ServerService) LookupGroup(name string) *ServerGroup {
-	groupsMutex.Lock()
-	defer groupsMutex.Unlock()
+	groupsMu.Lock()
+	defer groupsMu.Unlock()
 
-	group, ok := groups[strings.ToLower(name)]
+	group, ok := groupsMap[strings.ToLower(name)]
 	if !ok {
 		return nil
 	}
@@ -103,24 +103,24 @@ func (service *ServerService) LookupGroup(name string) *ServerGroup {
 }
 
 func (service *ServerService) AppendGroup(group *ServerGroup) {
-	groupsMutex.Lock()
-	groups[strings.ToLower(group.Id())] = group
-	groupsMutex.Unlock()
+	groupsMu.Lock()
+	groupsMap[strings.ToLower(group.Id())] = group
+	groupsMu.Unlock()
 }
 
 func (service *ServerService) DestroyGroup(name string) {
-	groupsMutex.Lock()
-	defer groupsMutex.Unlock()
+	groupsMu.Lock()
+	defer groupsMu.Unlock()
 
-	delete(groups, strings.ToLower(name))
+	delete(groupsMap, strings.ToLower(name))
 }
 
 func (service *ServerService) Groups() []*ServerGroup {
-	groupsMutex.Lock()
-	defer groupsMutex.Unlock()
+	groupsMu.Lock()
+	defer groupsMu.Unlock()
 
-	values := make([]*ServerGroup, 0, len(groups))
-	for _, group := range groups {
+	values := make([]*ServerGroup, 0, len(groupsMap))
+	for _, group := range groupsMap {
 		values = append(values, group)
 	}
 
@@ -189,11 +189,11 @@ func (service *ServerService) LoadGroups(database *mongo.Database) {
 		panic(err)
 	}
 
-	log.Printf("Successfully loaded %d server groups\n\n", len(groups))
+	log.Printf("Successfully loaded %d server groupsMap\n\n", len(groupsMap))
 }
 
 func (service *ServerService) LoadServers(database *mongo.Database) {
-	serversCollection := database.Collection("servers")
+	serversCollection := database.Collection("serversMap")
 	cursor, err := serversCollection.Find(context.TODO(), bson.D{{}})
 	if err != nil {
 		panic(err)
@@ -232,5 +232,5 @@ func (service *ServerService) LoadServers(database *mongo.Database) {
 		panic(err)
 	}
 
-	log.Printf("Successfully loaded %d servers\n", len(servers))
+	log.Printf("Successfully loaded %d serversMap\n", len(serversMap))
 }
