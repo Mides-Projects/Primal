@@ -21,6 +21,7 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 	serverId, ok := mux.Vars(r)["id"]
 	if !ok {
 		http.Error(w, "No ID found", http.StatusBadRequest)
+		log.Printf("[ServerUpRoute] No ID found")
 
 		return
 	}
@@ -28,6 +29,7 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 	serverInfo := server.Service().LookupById(serverId)
 	if serverInfo == nil {
 		http.Error(w, "Server not found", http.StatusBadRequest)
+		log.Printf("[ServerUpRoute] Server not found")
 
 		return
 	}
@@ -35,12 +37,14 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 	bungeeMode := r.URL.Query().Get("bungee")
 	if bungeeMode == "" {
 		http.Error(w, "Bungee mode is required", http.StatusBadRequest)
+		log.Printf("[ServerUpRoute] Bungee mode is required")
 
 		return
 	}
 
 	if bungeeMode != "true" && bungeeMode != "false" {
 		http.Error(w, "Invalid bungee mode", http.StatusBadRequest)
+		log.Printf("[ServerUpRoute] Invalid bungee mode")
 
 		return
 	}
@@ -48,12 +52,14 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 	onlineMode := r.URL.Query().Get("online")
 	if onlineMode == "" {
 		http.Error(w, "Online mode is required", http.StatusBadRequest)
+		log.Printf("[ServerUpRoute] Online mode is required")
 
 		return
 	}
 
 	if onlineMode != "true" && onlineMode != "false" {
 		http.Error(w, "Invalid online mode", http.StatusBadRequest)
+		log.Printf("[ServerUpRoute] Invalid online mode")
 
 		return
 	}
@@ -61,6 +67,7 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 	initialTime := serverInfo.InitialTime()
 	if initialTime == 0 {
 		http.Error(w, "Server was never down", http.StatusBadRequest)
+		log.Printf("[ServerUpRoute] Server was never down")
 
 		return
 	}
@@ -74,11 +81,10 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 	// Save the server model in a goroutine to avoid blocking the main thread
 	go server.SaveModel(model.WrapServerInfo(serverInfo))
 
-	log.Printf("[ServerUpRoute] Server %s is now back up. After %d ms", serverId, now-initialTime)
-
 	payload, err := common.WrapPayload("API_SERVER_UP", pubsub.NewServerStatusPacket(serverId))
 	if err != nil {
 		http.Error(w, "Failed to marshal packet", http.StatusInternalServerError)
+		log.Printf("[ServerUpRoute] Failed to marshal packet: %v", err)
 
 		return
 	}
@@ -86,9 +92,12 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 	err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
 	if err != nil {
 		http.Error(w, "Failed to publish packet", http.StatusInternalServerError)
+		log.Printf("[ServerUpRoute] Failed to publish packet: %v", err)
 
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
+
+	log.Printf("[ServerUpRoute] Server %s is now back up. After %d ms", serverId, now-initialTime)
 }

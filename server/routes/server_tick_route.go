@@ -22,6 +22,7 @@ func ServerTickRoute(w http.ResponseWriter, r *http.Request) {
 	id, ok := vars["id"]
 	if !ok {
 		http.Error(w, "No ID found", http.StatusBadRequest)
+		log.Printf("[Server-Tick] No ID found")
 
 		return
 	}
@@ -29,6 +30,7 @@ func ServerTickRoute(w http.ResponseWriter, r *http.Request) {
 	serverInfo := server.Service().LookupById(id)
 	if serverInfo == nil {
 		http.Error(w, "Server not found", http.StatusNotFound)
+		log.Printf("[Server-Tick] Server not found")
 
 		return
 	}
@@ -37,6 +39,7 @@ func ServerTickRoute(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(body)
 	if err != nil {
 		http.Error(w, "Failed to parse request body", http.StatusBadRequest)
+		log.Printf("[Server-Tick] Failed to parse request body: %v", err)
 
 		return
 	}
@@ -64,6 +67,7 @@ func ServerTickRoute(w http.ResponseWriter, r *http.Request) {
 	payload, err := common.WrapPayload("API_SERVER_TICK", body)
 	if err != nil {
 		http.Error(w, "Failed to marshal packet", http.StatusInternalServerError)
+		log.Printf("[Server-Tick] Failed to marshal packet: %v", err)
 
 		return
 	}
@@ -71,6 +75,7 @@ func ServerTickRoute(w http.ResponseWriter, r *http.Request) {
 	err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
 	if err != nil {
 		http.Error(w, "Failed to publish packet", http.StatusInternalServerError)
+		log.Printf("[Server-Tick] Failed to publish packet: %v", err)
 
 		return
 	}

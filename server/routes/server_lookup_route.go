@@ -18,6 +18,7 @@ func LookupServers(w http.ResponseWriter, r *http.Request) {
 	serverId, ok := mux.Vars(r)["id"]
 	if !ok {
 		http.Error(w, "No ID found", http.StatusBadRequest)
+		log.Printf("[Server-Lookup] No ID found")
 
 		return
 	}
@@ -52,6 +53,7 @@ func LookupServers(w http.ResponseWriter, r *http.Request) {
 	err := json.NewEncoder(w).Encode(responses)
 	if err != nil {
 		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		log.Printf("[Server-Lookup] Failed to encode response: %v", err)
 
 		return
 	}
