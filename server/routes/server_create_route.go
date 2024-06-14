@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func ServerCreateRoute(w http.ResponseWriter, r *http.Request) {
@@ -67,6 +68,8 @@ func ServerCreateRoute(w http.ResponseWriter, r *http.Request) {
 	}
 
 	serverInfo = server.NewServerInfo(serverId, portNum)
+	serverInfo.SetInitialTime(time.Now().UnixMilli())
+
 	server.Service().AppendServer(serverInfo)
 
 	// Save the model into MongoDB but in a goroutine, so it doesn't block the main thread
@@ -81,4 +84,6 @@ func ServerCreateRoute(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+
+	log.Printf("[Server-Create] Server %s created on port %d", serverId, portNum)
 }

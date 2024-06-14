@@ -44,25 +44,15 @@ func ServerTickRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// serverInfo.SetGroups(body.Groups)
 	serverInfo.SetPlayersCount(body.PlayersCount)
-	// serverInfo.SetPort(body.Port)
-
 	serverInfo.SetHeartbeat(body.Heartbeat)
-	// serverInfo.SetBungeeCord(body.BungeeCord)
-	// serverInfo.SetOnlineMode(body.OnlineMode)
+	serverInfo.SetPlayers(body.Players)
 
 	serverInfo.SetActiveThreads(body.ActiveThreads)
 	serverInfo.SetDaemonThreads(body.DaemonThreads)
 
-	// serverInfo.SetMotd(body.Motd)
 	serverInfo.SetTicksPerSecond(body.TicksPerSecond)
-	// serverInfo.SetDirectory(body.Directory)
 	serverInfo.SetFullTicks(body.FullTicks)
-	// serverInfo.SetMaxSlots(body.MaxSlots)
-	// serverInfo.SetInitialTime(body.InitialTime)
-	// serverInfo.SetPlugins(body.Plugins)
-	serverInfo.SetPlayers(body.Players)
 
 	payload, err := common.WrapPayload("API_SERVER_TICK", body)
 	if err != nil {

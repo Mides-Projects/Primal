@@ -5,7 +5,7 @@ type ServerInfoModel struct {
 	Port   int64    `bson:"port"`
 	Groups []string `bson:"groups"`
 
-	MaxSlots    int   `bson:"max_slots"`
+	MaxSlots    int64 `bson:"max_slots"`
 	Heartbeat   int64 `bson:"heartbeat"`
 	BungeeCord  bool  `bson:"bungee_cord"`
 	OnlineMode  bool  `bson:"online_mode"`

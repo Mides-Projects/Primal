@@ -2,11 +2,13 @@ package routes
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/gorilla/mux"
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/common/middleware"
 	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/pubsub"
+	"github.com/holypvp/primal/server/request"
 	"log"
 	"net/http"
 	"time"
@@ -33,28 +35,23 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bungeeMode := r.URL.Query().Get("bungee")
-	if bungeeMode != "true" && bungeeMode != "false" {
-		http.Error(w, "Invalid bungee mode", http.StatusBadRequest)
-		log.Printf("[ServerUpRoute] Invalid bungee mode")
+	body := &request.ServerUpBody{}
+	err := json.NewDecoder(r.Body).Decode(body)
+	if err != nil {
+		http.Error(w, "Failed to parse request body", http.StatusBadRequest)
+		log.Printf("[ServerUpRoute] Failed to parse request body: %v", err)
 
 		return
 	}
 
-	onlineMode := r.FormValue("online")
-	if onlineMode == "" {
-		http.Error(w, "Online mode is required", http.StatusBadRequest)
-		log.Printf("[ServerUpRoute] Online mode is required")
+	serverInfo.SetDirectory(body.Directory)
+	serverInfo.SetMotd(body.Motd)
 
-		return
-	}
+	serverInfo.SetBungeeCord(body.BungeeCord)
+	serverInfo.SetOnlineMode(body.OnlineMode)
 
-	if onlineMode != "true" && onlineMode != "false" {
-		http.Error(w, "Invalid online mode", http.StatusBadRequest)
-		log.Printf("[ServerUpRoute] Invalid online mode")
-
-		return
-	}
+	serverInfo.SetMaxSlots(body.MaxSlots)
+	serverInfo.SetPlugins(body.Plugins)
 
 	initialTime := serverInfo.InitialTime()
 	if initialTime == 0 {
@@ -63,9 +60,6 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-
-	serverInfo.SetBungeeCord(bungeeMode == "true")
-	serverInfo.SetOnlineMode(onlineMode == "true")
 
 	now := time.Now().UnixMilli()
 	serverInfo.SetInitialTime(now)
@@ -91,5 +85,5 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusOK)
 
-	log.Printf("[ServerUpRoute] Server %s is now back up. After %d ms", serverId, now-initialTime)
+	log.Printf("[ServerUpRoute] Server %s is now back up. After %d ms", serverId, now-serverInfo.Heartbeat())
 }

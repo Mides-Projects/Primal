@@ -8,17 +8,17 @@ type ServerInfo struct {
 	groups []string
 
 	playersCount   int
-	maxSlots       int
+	maxSlots       int64
 	heartbeat      int64
 	players        []string
 	bungeeCord     bool
 	onlineMode     bool
 	activeThreads  int
 	daemonThreads  int
-	motd           *string
+	motd           string
 	ticksPerSecond float64
 	directory      string
-	fullTicks      int64
+	fullTicks      float64
 	initialTime    int64
 	plugins        []string
 }
@@ -38,7 +38,7 @@ func NewServerInfo(id string, port int64) *ServerInfo {
 		onlineMode:     false,
 		activeThreads:  0,
 		daemonThreads:  0,
-		motd:           nil,
+		motd:           "",
 		ticksPerSecond: 0,
 		directory:      "",
 		fullTicks:      0,
@@ -88,12 +88,12 @@ func (i *ServerInfo) SetPlayersCount(count int) {
 }
 
 // MaxSlots returns the server's max slots.
-func (i *ServerInfo) MaxSlots() int {
+func (i *ServerInfo) MaxSlots() int64 {
 	return i.maxSlots
 }
 
 // SetMaxSlots sets the server's max slots.
-func (i *ServerInfo) SetMaxSlots(slots int) {
+func (i *ServerInfo) SetMaxSlots(slots int64) {
 	i.maxSlots = slots
 }
 
@@ -158,12 +158,12 @@ func (i *ServerInfo) SetDaemonThreads(daemonThreads int) {
 }
 
 // Motd returns the server's motd.
-func (i *ServerInfo) Motd() *string {
+func (i *ServerInfo) Motd() string {
 	return i.motd
 }
 
 // SetMotd sets the server's motd.
-func (i *ServerInfo) SetMotd(motd *string) {
+func (i *ServerInfo) SetMotd(motd string) {
 	i.motd = motd
 }
 
@@ -188,12 +188,12 @@ func (i *ServerInfo) SetDirectory(directory string) {
 }
 
 // FullTicks returns the server's full ticks.
-func (i *ServerInfo) FullTicks() int64 {
+func (i *ServerInfo) FullTicks() float64 {
 	return i.fullTicks
 }
 
 // SetFullTicks sets the server's full ticks.
-func (i *ServerInfo) SetFullTicks(fullTicks int64) {
+func (i *ServerInfo) SetFullTicks(fullTicks float64) {
 	i.fullTicks = fullTicks
 }
 

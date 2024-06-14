@@ -5,6 +5,7 @@ import (
 	"github.com/holypvp/primal/server/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
 	"strings"
 	"sync"
@@ -140,12 +141,24 @@ func SaveModel(infoModel model.ServerInfoModel) {
 		log.Fatal("Servers collection is nil")
 	}
 
-	_, err := collectionServers.InsertOne(context.TODO(), infoModel)
-	if err == nil {
+	result, err := collectionServers.UpdateOne(
+		context.TODO(),
+		bson.D{{"_id", infoModel.Id}},
+		bson.D{{"$set", infoModel}},
+		options.Update().SetUpsert(true),
+	)
+	// _, err := collectionServers.InsertOne(context.TODO(), infoModel)
+	if err != nil {
+		log.Fatal(err)
+
 		return
 	}
 
-	log.Fatal(err)
+	if result.UpsertedCount > 0 {
+		log.Printf("Server %s was inserted", infoModel.Id)
+	} else {
+		log.Printf("Server %s was updated", infoModel.Id)
+	}
 }
 
 func (service *ServerService) LoadGroups(database *mongo.Database) {
