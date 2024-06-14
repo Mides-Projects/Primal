@@ -6,7 +6,6 @@ import (
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/common/middleware"
 	"github.com/holypvp/primal/server"
-	"github.com/holypvp/primal/server/model"
 	"github.com/holypvp/primal/server/pubsub"
 	"log"
 	"net/http"
@@ -35,13 +34,6 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bungeeMode := r.URL.Query().Get("bungee")
-	if bungeeMode == "" {
-		http.Error(w, "Bungee mode is required", http.StatusBadRequest)
-		log.Printf("[ServerUpRoute] Bungee mode is required")
-
-		return
-	}
-
 	if bungeeMode != "true" && bungeeMode != "false" {
 		http.Error(w, "Invalid bungee mode", http.StatusBadRequest)
 		log.Printf("[ServerUpRoute] Invalid bungee mode")
@@ -49,7 +41,7 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	onlineMode := r.URL.Query().Get("online")
+	onlineMode := r.FormValue("online")
 	if onlineMode == "" {
 		http.Error(w, "Online mode is required", http.StatusBadRequest)
 		log.Printf("[ServerUpRoute] Online mode is required")
@@ -79,7 +71,7 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 	serverInfo.SetInitialTime(now)
 
 	// Save the server model in a goroutine to avoid blocking the main thread
-	go server.SaveModel(model.WrapServerInfo(serverInfo))
+	go server.SaveModel(serverInfo.ToModel())
 
 	payload, err := common.WrapPayload("API_SERVER_UP", pubsub.NewServerStatusPacket(serverId))
 	if err != nil {

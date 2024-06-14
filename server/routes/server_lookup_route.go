@@ -25,25 +25,7 @@ func LookupServers(w http.ResponseWriter, r *http.Request) {
 
 	var responses []response.ServerInfoResponse
 	for _, serverInfo := range server.Service().Servers() {
-		responses = append(responses, response.ServerInfoResponse{
-			Id:             serverInfo.Id(),
-			Port:           serverInfo.Port(),
-			Groups:         serverInfo.Groups(),
-			PlayersCount:   serverInfo.PlayersCount(),
-			MaxSlots:       serverInfo.MaxSlots(),
-			Heartbeat:      serverInfo.Heartbeat(),
-			Players:        serverInfo.Players(),
-			BungeeCord:     serverInfo.BungeeCord(),
-			OnlineMode:     serverInfo.OnlineMode(),
-			ActiveThreads:  serverInfo.ActiveThreads(),
-			DaemonThreads:  serverInfo.DaemonThreads(),
-			Motd:           serverInfo.Motd(),
-			TicksPerSecond: serverInfo.TicksPerSecond(),
-			Directory:      serverInfo.Directory(),
-			FullTicks:      serverInfo.FullTicks(),
-			InitialTime:    serverInfo.InitialTime(),
-			Plugins:        serverInfo.Plugins(),
-		})
+		responses = append(responses, response.NewServerInfoResponse(serverInfo))
 	}
 
 	if responses == nil {
@@ -58,5 +40,5 @@ func LookupServers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Print("Server " + serverId + " was looked up!")
+	log.Print("Server " + serverId + " has requested all servers")
 }

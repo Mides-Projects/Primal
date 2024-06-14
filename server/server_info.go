@@ -1,5 +1,7 @@
 package server
 
+import "github.com/holypvp/primal/server/model"
+
 type ServerInfo struct {
 	id     string
 	port   int64
@@ -213,4 +215,17 @@ func (i *ServerInfo) Plugins() []string {
 // SetPlugins sets the server's plugins.
 func (i *ServerInfo) SetPlugins(plugins []string) {
 	i.plugins = plugins
+}
+
+func (i *ServerInfo) ToModel() model.ServerInfoModel {
+	return model.ServerInfoModel{
+		Id:          i.Id(),
+		Port:        i.Port(),
+		Groups:      i.Groups(),
+		MaxSlots:    i.MaxSlots(),
+		Heartbeat:   i.Heartbeat(),
+		BungeeCord:  i.BungeeCord(),
+		OnlineMode:  i.OnlineMode(),
+		InitialTime: i.InitialTime(),
+	}
 }

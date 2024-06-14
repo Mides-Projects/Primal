@@ -6,7 +6,6 @@ import (
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/common/middleware"
 	"github.com/holypvp/primal/server"
-	"github.com/holypvp/primal/server/model"
 	"github.com/holypvp/primal/server/pubsub"
 	"log"
 	"net/http"
@@ -71,7 +70,7 @@ func ServerCreateRoute(w http.ResponseWriter, r *http.Request) {
 	server.Service().AppendServer(serverInfo)
 
 	// Save the model into MongoDB but in a goroutine, so it doesn't block the main thread
-	go server.SaveModel(model.WrapServerInfo(serverInfo))
+	go server.SaveModel(serverInfo.ToModel())
 
 	err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
 	if err != nil {

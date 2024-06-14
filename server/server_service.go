@@ -20,8 +20,8 @@ var (
 
 	groupsMap = map[string]*ServerGroup{}
 
-	serversCollection *mongo.Collection
-	groupsCollection  *mongo.Collection
+	collectionServers *mongo.Collection
+	collectionGroups  *mongo.Collection
 
 	instance *ServerService
 )
@@ -136,11 +136,11 @@ func Service() *ServerService {
 }
 
 func SaveModel(infoModel model.ServerInfoModel) {
-	if serversCollection == nil {
+	if collectionServers == nil {
 		log.Fatal("Servers collection is nil")
 	}
 
-	_, err := serversCollection.InsertOne(context.TODO(), infoModel)
+	_, err := collectionServers.InsertOne(context.TODO(), infoModel)
 	if err == nil {
 		return
 	}
@@ -149,13 +149,12 @@ func SaveModel(infoModel model.ServerInfoModel) {
 }
 
 func (service *ServerService) LoadGroups(database *mongo.Database) {
-	if groupsCollection != nil {
+	if collectionGroups != nil {
 		log.Fatal("Groups collection is already set")
 	}
 
-	groupsCollection := database.Collection("serverGroups")
-
-	cursor, err := groupsCollection.Find(context.TODO(), bson.D{{}})
+	collectionGroups = database.Collection("serverGroups")
+	cursor, err := collectionGroups.Find(context.TODO(), bson.D{{}})
 	if err != nil {
 		panic(err)
 	}
@@ -189,12 +188,16 @@ func (service *ServerService) LoadGroups(database *mongo.Database) {
 		panic(err)
 	}
 
-	log.Printf("Successfully loaded %d server groupsMap\n\n", len(groupsMap))
+	log.Printf("Successfully loaded %d server groups", len(groupsMap))
 }
 
 func (service *ServerService) LoadServers(database *mongo.Database) {
-	serversCollection := database.Collection("serversMap")
-	cursor, err := serversCollection.Find(context.TODO(), bson.D{{}})
+	collectionServers = database.Collection("servers")
+	if collectionServers == nil {
+		log.Fatal("Servers collection is nil")
+	}
+
+	cursor, err := collectionServers.Find(context.TODO(), bson.D{{}})
 	if err != nil {
 		panic(err)
 	}
@@ -232,5 +235,5 @@ func (service *ServerService) LoadServers(database *mongo.Database) {
 		panic(err)
 	}
 
-	log.Printf("Successfully loaded %d serversMap\n", len(serversMap))
+	log.Printf("Successfully loaded %d servers", len(serversMap))
 }

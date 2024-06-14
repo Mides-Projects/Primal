@@ -1,5 +1,7 @@
 package response
 
+import "github.com/holypvp/primal/server"
+
 type ServerInfoResponse struct {
 	Id     string   `json:"id"`
 	Port   int64    `json:"port"`
@@ -19,4 +21,26 @@ type ServerInfoResponse struct {
 	FullTicks      int64    `json:"full-ticks"`
 	InitialTime    int64    `json:"initial-time"`
 	Plugins        []string `json:"plugins"`
+}
+
+func NewServerInfoResponse(serverInfo *server.ServerInfo) ServerInfoResponse {
+	return ServerInfoResponse{
+		Id:             serverInfo.Id(),
+		Port:           serverInfo.Port(),
+		Groups:         serverInfo.Groups(),
+		PlayersCount:   serverInfo.PlayersCount(),
+		MaxSlots:       serverInfo.MaxSlots(),
+		Heartbeat:      serverInfo.Heartbeat(),
+		Players:        serverInfo.Players(),
+		BungeeCord:     serverInfo.BungeeCord(),
+		OnlineMode:     serverInfo.OnlineMode(),
+		ActiveThreads:  serverInfo.ActiveThreads(),
+		DaemonThreads:  serverInfo.DaemonThreads(),
+		Motd:           serverInfo.Motd(),
+		TicksPerSecond: serverInfo.TicksPerSecond(),
+		Directory:      serverInfo.Directory(),
+		FullTicks:      serverInfo.FullTicks(),
+		InitialTime:    serverInfo.InitialTime(),
+		Plugins:        serverInfo.Plugins(),
+	}
 }
