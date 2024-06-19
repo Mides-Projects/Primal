@@ -3,45 +3,31 @@ package routes
 import (
 	"context"
 	"encoding/json"
-	"github.com/gorilla/mux"
+	"fmt"
 	"github.com/holypvp/primal/common"
-	"github.com/holypvp/primal/common/middleware"
 	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/pubsub"
 	"github.com/holypvp/primal/server/request"
-	"log"
+	"github.com/labstack/echo/v4"
 	"net/http"
 	"time"
 )
 
-func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
-	if !middleware.HandleAuth(w, r) {
-		return
-	}
-
-	serverId, ok := mux.Vars(r)["id"]
-	if !ok {
-		http.Error(w, "No ID found", http.StatusBadRequest)
-		log.Printf("[ServerUpRoute] No ID found")
-
-		return
+func ServerUpRoute(c echo.Context) error {
+	serverId := c.Param("id")
+	if serverId == "" {
+		return c.String(http.StatusBadRequest, "Server ID is required")
 	}
 
 	serverInfo := server.Service().LookupById(serverId)
 	if serverInfo == nil {
-		http.Error(w, "Server not found", http.StatusBadRequest)
-		log.Printf("[ServerUpRoute] Server not found")
-
-		return
+		return c.String(http.StatusNoContent, "Server not found")
 	}
 
 	body := &request.ServerUpBody{}
-	err := json.NewDecoder(r.Body).Decode(body)
+	err := json.NewDecoder(c.Request().Body).Decode(body)
 	if err != nil {
-		http.Error(w, "Failed to parse request body", http.StatusBadRequest)
-		log.Printf("[ServerUpRoute] Failed to parse request body: %v", err)
-
-		return
+		return c.String(http.StatusBadRequest, "Invalid request body")
 	}
 
 	serverInfo.SetDirectory(body.Directory)
@@ -55,10 +41,7 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 
 	initialTime := serverInfo.InitialTime()
 	if initialTime == 0 {
-		http.Error(w, "Server was never down", http.StatusBadRequest)
-		log.Printf("[ServerUpRoute] Server was never down")
-
-		return
+		return c.String(http.StatusBadRequest, "Server has not been created yet")
 	}
 
 	now := time.Now().UnixMilli()
@@ -69,21 +52,13 @@ func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
 
 	payload, err := common.WrapPayload("API_SERVER_UP", pubsub.NewServerStatusPacket(serverId))
 	if err != nil {
-		http.Error(w, "Failed to marshal packet", http.StatusInternalServerError)
-		log.Printf("[ServerUpRoute] Failed to marshal packet: %v", err)
-
-		return
+		return c.String(http.StatusInternalServerError, "Failed to wrap payload")
 	}
 
 	err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
 	if err != nil {
-		http.Error(w, "Failed to publish packet", http.StatusInternalServerError)
-		log.Printf("[ServerUpRoute] Failed to publish packet: %v", err)
-
-		return
+		return c.String(http.StatusInternalServerError, "Failed to publish payload")
 	}
 
-	w.WriteHeader(http.StatusOK)
-
-	log.Printf("[ServerUpRoute] Server %s is now back up. After %d ms", serverId, now-serverInfo.Heartbeat())
+	return c.String(http.StatusOK, fmt.Sprintf("Server %s is now back up. After %d ms", serverId, now-serverInfo.Heartbeat()))
 }

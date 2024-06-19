@@ -3,45 +3,28 @@ package routes
 import (
 	"context"
 	"encoding/json"
-	"github.com/gorilla/mux"
 	"github.com/holypvp/primal/common"
-	"github.com/holypvp/primal/common/middleware"
 	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/request"
-	"log"
+	"github.com/labstack/echo/v4"
 	"net/http"
 )
 
-func ServerTickRoute(w http.ResponseWriter, r *http.Request) {
-	if !middleware.HandleAuth(w, r) {
-		return
-	}
-
-	vars := mux.Vars(r)
-
-	id, ok := vars["id"]
-	if !ok {
-		http.Error(w, "No ID found", http.StatusBadRequest)
-		log.Printf("[Server-Tick] No ID found")
-
-		return
+func ServerTickRoute(c echo.Context) error {
+	id := c.Param("id")
+	if id == "" {
+		return c.String(http.StatusBadRequest, "Server ID is required")
 	}
 
 	serverInfo := server.Service().LookupById(id)
 	if serverInfo == nil {
-		http.Error(w, "Server not found", http.StatusNotFound)
-		log.Printf("[Server-Tick] Server not found")
-
-		return
+		return c.String(http.StatusNoContent, "Server not found")
 	}
 
 	body := &request.ServerTickBody{}
-	err := json.NewDecoder(r.Body).Decode(body)
+	err := json.NewDecoder(c.Request().Body).Decode(body)
 	if err != nil {
-		http.Error(w, "Failed to parse request body", http.StatusBadRequest)
-		log.Printf("[Server-Tick] Failed to parse request body: %v", err)
-
-		return
+		return c.String(http.StatusBadRequest, "Invalid request body")
 	}
 
 	serverInfo.SetPlayersCount(body.PlayersCount)
@@ -56,21 +39,13 @@ func ServerTickRoute(w http.ResponseWriter, r *http.Request) {
 
 	payload, err := common.WrapPayload("API_SERVER_TICK", body)
 	if err != nil {
-		http.Error(w, "Failed to marshal packet", http.StatusInternalServerError)
-		log.Printf("[Server-Tick] Failed to marshal packet: %v", err)
-
-		return
+		return c.String(http.StatusInternalServerError, "Failed to wrap payload")
 	}
 
 	err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
 	if err != nil {
-		http.Error(w, "Failed to publish packet", http.StatusInternalServerError)
-		log.Printf("[Server-Tick] Failed to publish packet: %v", err)
-
-		return
+		return c.String(http.StatusInternalServerError, "Failed to publish payload")
 	}
 
-	log.Printf("Successfully updated server tick for %s\n", id)
-
-	w.WriteHeader(http.StatusOK)
+	return c.String(http.StatusOK, "Server ticked")
 }

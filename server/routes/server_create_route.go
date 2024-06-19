@@ -2,69 +2,44 @@ package routes
 
 import (
 	"context"
-	"github.com/gorilla/mux"
+	"fmt"
 	"github.com/holypvp/primal/common"
-	"github.com/holypvp/primal/common/middleware"
 	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/pubsub"
-	"log"
+	"github.com/labstack/echo/v4"
 	"net/http"
 	"strconv"
 	"time"
 )
 
-func ServerCreateRoute(w http.ResponseWriter, r *http.Request) {
-	if !middleware.HandleAuth(w, r) {
-		return
-	}
-
-	vars := mux.Vars(r)
-
-	serverId, ok := vars["id"]
-	if !ok {
-		http.Error(w, "No ID found", http.StatusBadRequest)
-		log.Print("[Server-Create] No ID found")
-
-		return
+func ServerCreateRoute(c echo.Context) error {
+	serverId := c.Param("id")
+	if serverId == "" {
+		return c.String(http.StatusBadRequest, "No ID found")
 	}
 
 	serverInfo := server.Service().LookupById(serverId)
 	if serverInfo != nil {
-		http.Error(w, "Server already exists", http.StatusBadRequest)
-		log.Printf("[Server-Create] Server %s already exists", serverId)
-
-		return
+		return c.String(http.StatusConflict, fmt.Sprintf("Server %s already exists", serverId))
 	}
 
-	port, ok := vars["port"]
-	if !ok {
-		http.Error(w, "No port found", http.StatusBadRequest)
-		log.Print("[Server-Create] No port found")
-
-		return
+	port := c.Param("port")
+	if port == "" {
+		return c.String(http.StatusBadRequest, fmt.Sprintf("No port found for server %s", serverId))
 	}
 
 	portNum, err := strconv.ParseInt(port, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid port", http.StatusBadRequest)
-		log.Printf("[Server-Create] Invalid port: %v", err)
-
-		return
+		return c.String(http.StatusBadRequest, fmt.Sprintf("Invalid port for server %s", serverId))
 	}
 
 	if server.Service().LookupByPort(portNum) != nil {
-		http.Error(w, "Port already in use", http.StatusBadRequest)
-		log.Printf("[Server-Create] Port %d already in use", portNum)
-
-		return
+		return c.String(http.StatusConflict, fmt.Sprintf("Port %d is already in use", portNum))
 	}
 
 	payload, err := common.WrapPayload("API_SERVER_CREATE", pubsub.NewServerCreatePacket(serverId, portNum))
 	if err != nil {
-		http.Error(w, "Failed to marshal packet", http.StatusInternalServerError)
-		log.Printf("[Server-Create] Failed to marshal packet: %v", err)
-
-		return
+		return c.String(http.StatusInternalServerError, "Failed to marshal packet")
 	}
 
 	serverInfo = server.NewServerInfo(serverId, portNum)
@@ -73,17 +48,14 @@ func ServerCreateRoute(w http.ResponseWriter, r *http.Request) {
 	server.Service().AppendServer(serverInfo)
 
 	// Save the model into MongoDB but in a goroutine, so it doesn't block the main thread
+	// Here you have the difference between the two snippets
+	// Main thread ms = +133ms / Goroutine ms = 63ms average
 	go server.SaveModel(serverInfo.ToModel())
 
 	err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
 	if err != nil {
-		http.Error(w, "Failed to publish packet", http.StatusInternalServerError)
-		log.Printf("[Server-Create] Failed to publish packet: %v", err)
-
-		return
+		return c.String(http.StatusInternalServerError, "Failed to publish packet")
 	}
 
-	w.WriteHeader(http.StatusOK)
-
-	log.Printf("[Server-Create] Server %s created on port %d", serverId, portNum)
+	return c.String(http.StatusOK, fmt.Sprintf("Server %s created on port %d", serverId, portNum))
 }

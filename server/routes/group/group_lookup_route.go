@@ -1,19 +1,13 @@
 package group
 
 import (
-	"encoding/json"
-	"github.com/holypvp/primal/common/middleware"
 	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/response"
-	"log"
+	"github.com/labstack/echo/v4"
 	"net/http"
 )
 
-func GroupLookupRoute(w http.ResponseWriter, r *http.Request) {
-	if !middleware.HandleAuth(w, r) {
-		return
-	}
-
+func GroupLookupRoute(c echo.Context) error {
 	// serverId, ok := mux.Vars(r)["id"]
 	// if !ok {
 	// 	http.Error(w, "No ID found", http.StatusBadRequest)
@@ -43,12 +37,5 @@ func GroupLookupRoute(w http.ResponseWriter, r *http.Request) {
 		groupsResponse = []response.ServerGroupResponse{}
 	}
 
-	err := json.NewEncoder(w).Encode(groupsResponse)
-	if err != nil {
-		http.Error(w, "Failed to marshal groups", http.StatusInternalServerError)
-
-		return
-	}
-
-	log.Print("Server group lookup route hit")
+	return c.JSON(http.StatusOK, groupsResponse)
 }

@@ -1,14 +1,12 @@
 package main
 
 import (
-	"github.com/gorilla/mux"
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/common/config"
 	"github.com/holypvp/primal/common/loader"
 	"github.com/holypvp/primal/server"
 	"gopkg.in/yaml.v2"
 	"log"
-	"net/http"
 	"os"
 )
 
@@ -35,9 +33,9 @@ func main() {
 	server.Service().LoadGroups(database)
 	server.Service().LoadServers(database)
 
-	router := mux.NewRouter().StrictSlash(true)
+	log.Println("App is running on port " + configYaml.Port + "...")
 
-	loader.LoadAll(router)
+	loader.LoadAll(configYaml.Port)
 
 	// route(router, "/players/{id}/lookup/{type}", playerRoute.LookupPlayer, "GET")
 	// route(router, "/players/save", playerRoute.SavePlayer, "POST")
@@ -46,7 +44,5 @@ func main() {
 	// to pass in our newly created router as the second
 	// argument
 
-	log.Println("App is running on port " + configYaml.Port + "...")
-
-	log.Fatal(http.ListenAndServe(":"+configYaml.Port, router))
+	// log.Fatal(http.ListenAndServe(":"+configYaml.Port, router))
 }
