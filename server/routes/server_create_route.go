@@ -15,31 +15,31 @@ import (
 func ServerCreateRoute(c echo.Context) error {
 	serverId := c.Param("id")
 	if serverId == "" {
-		return c.String(http.StatusBadRequest, "No ID found")
+		return echo.NewHTTPError(http.StatusBadRequest, "No ID found")
 	}
 
 	serverInfo := server.Service().LookupById(serverId)
 	if serverInfo != nil {
-		return c.String(http.StatusConflict, fmt.Sprintf("Server %s already exists", serverId))
+		return echo.NewHTTPError(http.StatusConflict, fmt.Sprintf("Server %s already exists", serverId))
 	}
 
 	port := c.Param("port")
 	if port == "" {
-		return c.String(http.StatusBadRequest, fmt.Sprintf("No port found for server %s", serverId))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("No port found for server %s", serverId))
 	}
 
 	portNum, err := strconv.ParseInt(port, 10, 64)
 	if err != nil {
-		return c.String(http.StatusBadRequest, fmt.Sprintf("Invalid port for server %s", serverId))
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid port for server %s", serverId))
 	}
 
 	if server.Service().LookupByPort(portNum) != nil {
-		return c.String(http.StatusConflict, fmt.Sprintf("Port %d is already in use", portNum))
+		return echo.NewHTTPError(http.StatusConflict, fmt.Sprintf("Port %d is already in use", portNum))
 	}
 
 	payload, err := common.WrapPayload("API_SERVER_CREATE", pubsub.NewServerCreatePacket(serverId, portNum))
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "Failed to marshal packet")
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to marshal packet").SetInternal(err)
 	}
 
 	serverInfo = server.NewServerInfo(serverId, portNum)
@@ -54,7 +54,7 @@ func ServerCreateRoute(c echo.Context) error {
 
 	err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "Failed to publish packet")
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to publish packet").SetInternal(err)
 	}
 
 	return c.String(http.StatusOK, fmt.Sprintf("Server %s created on port %d", serverId, portNum))

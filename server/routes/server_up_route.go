@@ -16,18 +16,18 @@ import (
 func ServerUpRoute(c echo.Context) error {
 	serverId := c.Param("id")
 	if serverId == "" {
-		return c.String(http.StatusBadRequest, "Server ID is required")
+		return echo.NewHTTPError(http.StatusBadRequest, "Server ID is required")
 	}
 
 	serverInfo := server.Service().LookupById(serverId)
 	if serverInfo == nil {
-		return c.String(http.StatusNoContent, "Server not found")
+		return echo.NewHTTPError(http.StatusNoContent, "Server not found")
 	}
 
 	body := &request.ServerUpBody{}
 	err := json.NewDecoder(c.Request().Body).Decode(body)
 	if err != nil {
-		return c.String(http.StatusBadRequest, "Invalid request body")
+		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
 
 	serverInfo.SetDirectory(body.Directory)
@@ -41,7 +41,7 @@ func ServerUpRoute(c echo.Context) error {
 
 	initialTime := serverInfo.InitialTime()
 	if initialTime == 0 {
-		return c.String(http.StatusBadRequest, "Server has not been created yet")
+		return echo.NewHTTPError(http.StatusBadRequest, "Server has not been created yet")
 	}
 
 	now := time.Now().UnixMilli()
@@ -52,12 +52,13 @@ func ServerUpRoute(c echo.Context) error {
 
 	payload, err := common.WrapPayload("API_SERVER_UP", pubsub.NewServerStatusPacket(serverId))
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "Failed to wrap payload")
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to wrap payload").SetInternal(err)
 	}
 
+	// TODO: Maybe we need do the publish in a goroutine too
 	err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
 	if err != nil {
-		return c.String(http.StatusInternalServerError, "Failed to publish payload")
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to publish payload").SetInternal(err)
 	}
 
 	return c.String(http.StatusOK, fmt.Sprintf("Server %s is now back up. After %d ms", serverId, now-serverInfo.Heartbeat()))

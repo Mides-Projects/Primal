@@ -8,6 +8,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"log"
 	"os"
+	"time"
 )
 
 func main() {
@@ -35,7 +36,7 @@ func main() {
 
 	log.Println("App is running on port " + configYaml.Port + "...")
 
-	loader.LoadAll(configYaml.Port)
+	loader.LoadAll(time.Now(), configYaml.Port)
 
 	// route(router, "/players/{id}/lookup/{type}", playerRoute.LookupPlayer, "GET")
 	// route(router, "/players/save", playerRoute.SavePlayer, "POST")

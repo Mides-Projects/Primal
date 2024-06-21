@@ -11,7 +11,7 @@ import (
 func LookupServers(c echo.Context) error {
 	serverId := c.Param("id")
 	if serverId == "" {
-		return c.String(http.StatusBadRequest, "No ID found")
+		return echo.NewHTTPError(http.StatusBadRequest, "No ID found")
 	}
 
 	var responses []response.ServerInfoResponse

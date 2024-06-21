@@ -7,9 +7,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"log"
+	"time"
 )
 
-func LoadAll(port string) {
+func LoadAll(now time.Time, port string) {
 	e := echo.New()
 
 	e.Use(middleware.Logger())
@@ -24,6 +25,7 @@ func LoadAll(port string) {
 
 	e.GET("/apiv2/servers/:id/groups/lookup", group.GroupLookupRoute)
 
+	log.Printf("App take %s to start\n", time.Since(now))
 	log.Fatal(e.Start("0.0.0.0:" + port))
 
 	// router.HandleFunc("/apiv2/servers/{id}/create/{port}", server_routes.ServerCreateRoute).Methods("POST")
