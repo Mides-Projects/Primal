@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/server"
+	"github.com/holypvp/primal/server/object"
 	"github.com/holypvp/primal/server/pubsub"
 	"github.com/labstack/echo/v4"
 	"log"
@@ -38,10 +39,10 @@ func ServerCreateRoute(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusConflict, fmt.Sprintf("Port %d is already in use", portNum))
 	}
 
-	serverInfo = server.NewServerInfo(serverId, portNum)
+	serverInfo = object.NewServerInfo(serverId, portNum)
 	serverInfo.SetInitialTime(time.Now().UnixMilli())
 
-	server.Service().StoreServer(serverInfo)
+	server.Service().CacheServer(serverInfo)
 
 	// Save the model into MongoDB but in a goroutine, so it doesn't block the main thread
 	// Here you have the difference between the two snippets

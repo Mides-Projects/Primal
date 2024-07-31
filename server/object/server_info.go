@@ -1,4 +1,4 @@
-package server
+package object
 
 import "github.com/holypvp/primal/server/model"
 

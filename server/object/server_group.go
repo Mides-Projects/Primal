@@ -1,4 +1,4 @@
-package server
+package object
 
 type ServerGroup struct {
 	id                    string

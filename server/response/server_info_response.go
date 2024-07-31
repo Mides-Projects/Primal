@@ -1,6 +1,8 @@
 package response
 
-import "github.com/holypvp/primal/server"
+import (
+	"github.com/holypvp/primal/server/object"
+)
 
 type ServerInfoResponse struct {
 	Id     string   `json:"id"`
@@ -23,7 +25,7 @@ type ServerInfoResponse struct {
 	Plugins        []string `json:"plugins"`
 }
 
-func NewServerInfoResponse(serverInfo *server.ServerInfo) ServerInfoResponse {
+func NewServerInfoResponse(serverInfo *object.ServerInfo) ServerInfoResponse {
 	return ServerInfoResponse{
 		Id:             serverInfo.Id(),
 		Port:           serverInfo.Port(),
