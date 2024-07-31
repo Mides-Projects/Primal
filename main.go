@@ -1,13 +1,15 @@
 package main
 
 import (
-	"github.com/holypvp/primal/common"
-	"github.com/holypvp/primal/common/config"
-	"github.com/holypvp/primal/common/loader"
-	"gopkg.in/yaml.v2"
-	"log"
-	"os"
-	"time"
+    "github.com/holypvp/primal/common"
+    "github.com/holypvp/primal/common/config"
+    "github.com/holypvp/primal/common/startup"
+    "gopkg.in/yaml.v2"
+    "log"
+    "os"
+    "os/signal"
+    "syscall"
+    "time"
 )
 
 func main() {
@@ -16,26 +18,34 @@ func main() {
         panic("config.yml not found")
     }
 
-    configYaml := &config.Yaml{}
-    err = yaml.Unmarshal(file, configYaml)
+    conf := &config.Yaml{}
+    err = yaml.Unmarshal(file, conf)
     if err != nil {
         panic("config.yml is invalid")
     }
 
-    common.RedisChannel = configYaml.RedisChannel
-    common.APIKey = configYaml.Key
+    common.RedisChannel = conf.RedisChannel
+    common.APIKey = conf.Key
 
-    common.LoadMongo(configYaml.MongoUri)
-    common.LoadRedis(configYaml.RedisUri)
+    common.LoadMongo(conf.MongoUri)
+    common.LoadRedis(conf.RedisUri)
 
     database := common.MongoClient.Database("api")
 
     // server.Service().LoadGroups(database)
     // server.Service().LoadServers(database)
 
-    log.Println("App is running on port " + configYaml.Port + "...")
+    log.Println("App is running on port " + conf.Port + "...")
 
-    loader.LoadAll(time.Now(), configYaml.Port)
+    go func() {
+        sig := make(chan os.Signal, 1)
+        signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+        <-sig
+        log.Println("Shutting down...")
+        startup.Shutdown()
+    }()
+
+    startup.LoadAll(time.Now(), conf.Port)
 
     // route(router, "/players/{id}/lookup/{type}", playerRoute.LookupPlayer, "GET")
     // route(router, "/players/save", playerRoute.SavePlayer, "POST")
@@ -44,5 +54,5 @@ func main() {
     // to pass in our newly created router as the second
     // argument
 
-    // log.Fatal(http.ListenAndServe(":"+configYaml.Port, router))
+    // log.Fatal(http.ListenAndServe(":"+conf.Port, router))
 }
