@@ -1,12 +1,12 @@
 package pubsub
 
-type server_create_packet struct {
+type ServerCreatePacket struct {
 	Id   string `json:"_id"`
 	Port int64  `json:"port"`
 }
 
-func NewServerCreatePacket(id string, port int64) *server_create_packet {
-	return &server_create_packet{
+func NewServerCreatePacket(id string, port int64) ServerCreatePacket {
+	return ServerCreatePacket{
 		Id:   id,
 		Port: port,
 	}

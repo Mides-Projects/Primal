@@ -7,6 +7,7 @@ import (
 	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/pubsub"
 	"github.com/labstack/echo/v4"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -37,25 +38,28 @@ func ServerCreateRoute(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusConflict, fmt.Sprintf("Port %d is already in use", portNum))
 	}
 
-	payload, err := common.WrapPayload("API_SERVER_CREATE", pubsub.NewServerCreatePacket(serverId, portNum))
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to marshal packet").SetInternal(err)
-	}
-
 	serverInfo = server.NewServerInfo(serverId, portNum)
 	serverInfo.SetInitialTime(time.Now().UnixMilli())
 
-	server.Service().AppendServer(serverInfo)
+	server.Service().StoreServer(serverInfo)
 
 	// Save the model into MongoDB but in a goroutine, so it doesn't block the main thread
 	// Here you have the difference between the two snippets
 	// Main thread ms = +133ms / Goroutine ms = 63ms average
-	go server.SaveModel(serverInfo.ToModel())
+	// but small issue is I can't get the error from the goroutine
+	go func() {
+		server.SaveModel(serverInfo.ToModel())
 
-	err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
-	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to publish packet").SetInternal(err)
-	}
+		payload, err := common.WrapPayload("API_SERVER_CREATE", pubsub.NewServerCreatePacket(serverId, portNum))
+		if err != nil {
+			log.Fatal("Failed to marshal packet: ", err)
+		}
+
+		err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
+		if err != nil {
+			log.Fatal("Failed to publish packet: ", err)
+		}
+	}()
 
 	return c.String(http.StatusOK, fmt.Sprintf("Server %s created on port %d", serverId, portNum))
 }

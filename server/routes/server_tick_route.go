@@ -37,6 +37,8 @@ func ServerTickRoute(c echo.Context) error {
 	serverInfo.SetTicksPerSecond(body.TicksPerSecond)
 	serverInfo.SetFullTicks(body.FullTicks)
 
+	// TODO: This have performance issues because it's blocking the main thread
+	// so I prefer make the wrapper and publish in a goroutine
 	payload, err := common.WrapPayload("API_SERVER_TICK", body)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to wrap payload").SetInternal(err)

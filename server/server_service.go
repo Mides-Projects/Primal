@@ -53,7 +53,7 @@ func (service *ServerService) LookupByPort(port int64) *ServerInfo {
 	return service.LookupById(id)
 }
 
-func (service *ServerService) AppendServer(serverInfo *ServerInfo) {
+func (service *ServerService) StoreServer(serverInfo *ServerInfo) {
 	serversMu.Lock()
 	serversMap[strings.ToLower(serverInfo.Id())] = serverInfo
 	serversMu.Unlock()
@@ -103,7 +103,7 @@ func (service *ServerService) LookupGroup(name string) *ServerGroup {
 	return group
 }
 
-func (service *ServerService) AppendGroup(group *ServerGroup) {
+func (service *ServerService) StoreGroup(group *ServerGroup) {
 	groupsMu.Lock()
 	groupsMap[strings.ToLower(group.Id())] = group
 	groupsMu.Unlock()
@@ -181,7 +181,7 @@ func (service *ServerService) LoadGroups(database *mongo.Database) {
 			return
 		}
 
-		service.AppendGroup(&ServerGroup{
+		service.StoreGroup(&ServerGroup{
 			id:                    result.Id,
 			metadata:              result.Metadata,
 			announcements:         result.Announcements,
@@ -224,7 +224,7 @@ func (service *ServerService) LoadServers(database *mongo.Database) {
 			continue
 		}
 
-		service.AppendServer(&ServerInfo{
+		service.StoreServer(&ServerInfo{
 			id:     result.Id,
 			port:   result.Port,
 			groups: result.Groups,
