@@ -1,5 +1,7 @@
 package common
 
+import "encoding/json"
+
 type Payload struct {
 	PID     string      `json:"pid"`
 	From    int64       `json:"from"`
@@ -12,4 +14,16 @@ func NewPayload(pid string, from int64, payload interface{}) Payload {
 		From:    from,
 		Payload: payload,
 	}
+}
+
+func ErrorResponse(code int, message string) string {
+	result, err := json.Marshal(map[string]interface{}{
+		"code":    code,
+		"message": message,
+	})
+	if err != nil {
+		return `{"code":500,"message":"Internal Server Error"}`
+	}
+
+	return string(result)
 }

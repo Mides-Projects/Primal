@@ -17,26 +17,26 @@ import (
 func ServerCreateRoute(c echo.Context) error {
 	serverId := c.Param("id")
 	if serverId == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "No ID found")
+		return echo.NewHTTPError(http.StatusBadRequest, common.ErrorResponse(http.StatusBadRequest, "No server ID found"))
 	}
 
 	serverInfo := server.Service().LookupById(serverId)
 	if serverInfo != nil {
-		return echo.NewHTTPError(http.StatusConflict, fmt.Sprintf("Server %s already exists", serverId))
+		return echo.NewHTTPError(http.StatusConflict, common.ErrorResponse(http.StatusConflict, fmt.Sprintf("Server %s already exists", serverId)))
 	}
 
 	port := c.Param("port")
 	if port == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("No port found for server %s", serverId))
+		return echo.NewHTTPError(http.StatusBadRequest, common.ErrorResponse(http.StatusBadRequest, "No port found"))
 	}
 
 	portNum, err := strconv.ParseInt(port, 10, 64)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid port for server %s", serverId))
+		return echo.NewHTTPError(http.StatusBadRequest, common.ErrorResponse(http.StatusBadRequest, "Invalid port number"))
 	}
 
 	if server.Service().LookupByPort(portNum) != nil {
-		return echo.NewHTTPError(http.StatusConflict, fmt.Sprintf("Port %d is already in use", portNum))
+		return echo.NewHTTPError(http.StatusConflict, common.ErrorResponse(http.StatusConflict, fmt.Sprintf("Port %d already in use", portNum)))
 	}
 
 	serverInfo = model.NewServerInfo(serverId, portNum)
