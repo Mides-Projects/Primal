@@ -1,6 +1,9 @@
 package common
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"github.com/labstack/echo/v4"
+)
 
 type Payload struct {
 	PID     string      `json:"pid"`
@@ -16,14 +19,11 @@ func NewPayload(pid string, from int64, payload interface{}) Payload {
 	}
 }
 
-func ErrorResponse(code int, message string) string {
-	result, err := json.Marshal(map[string]interface{}{
-		"code":    code,
-		"message": message,
-	})
+func HTTPError(code int, message string) error {
+	result, err := json.Marshal(map[string]interface{}{"code": code, "message": message})
 	if err != nil {
-		return `{"code":500,"message":"Internal Server Error"}`
+		return echo.NewHTTPError(code, `{"code":500,"message":"Internal Server Error"}`)
 	}
 
-	return string(result)
+	return echo.NewHTTPError(code, string(result))
 }

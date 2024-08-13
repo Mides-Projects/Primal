@@ -3,6 +3,7 @@ package routes
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/request"
@@ -13,18 +14,18 @@ import (
 func ServerTickRoute(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, common.ErrorResponse(http.StatusBadRequest, "No server ID found"))
+		return common.HTTPError(http.StatusBadRequest, "No server ID found")
 	}
 
 	serverInfo := server.Service().LookupById(id)
 	if serverInfo == nil {
-		return echo.NewHTTPError(http.StatusNoContent, common.ErrorResponse(http.StatusNoContent, "Server not found"))
+		return common.HTTPError(http.StatusNoContent, "Server not found")
 	}
 
 	body := &request.ServerTickBodyRequest{}
 	err := json.NewDecoder(c.Request().Body).Decode(body)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, common.ErrorResponse(http.StatusBadRequest, "Failed to decode body")).SetInternal(err)
+		return common.HTTPError(http.StatusBadRequest, errors.Join(errors.New("failed to decode body"), err).Error())
 	}
 
 	serverInfo.SetPlayersCount(body.PlayersCount)
