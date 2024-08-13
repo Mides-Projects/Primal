@@ -13,18 +13,18 @@ import (
 func ServerTickRoute(c echo.Context) error {
 	id := c.Param("id")
 	if id == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "Server ID is required")
+		return echo.NewHTTPError(http.StatusBadRequest, common.ErrorResponse(http.StatusBadRequest, "No server ID found"))
 	}
 
 	serverInfo := server.Service().LookupById(id)
 	if serverInfo == nil {
-		return echo.NewHTTPError(http.StatusNoContent, "Server not found")
+		return echo.NewHTTPError(http.StatusNoContent, common.ErrorResponse(http.StatusNoContent, "Server not found"))
 	}
 
 	body := &request.ServerTickBodyRequest{}
 	err := json.NewDecoder(c.Request().Body).Decode(body)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+		return echo.NewHTTPError(http.StatusBadRequest, common.ErrorResponse(http.StatusBadRequest, "Failed to decode body")).SetInternal(err)
 	}
 
 	serverInfo.SetPlayersCount(body.PlayersCount)

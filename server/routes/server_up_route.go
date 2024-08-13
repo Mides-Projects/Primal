@@ -16,18 +16,18 @@ import (
 func ServerUpRoute(c echo.Context) error {
 	serverId := c.Param("id")
 	if serverId == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "Server ID is required")
+		return echo.NewHTTPError(http.StatusBadRequest, common.ErrorResponse(http.StatusBadRequest, "No server ID found"))
 	}
 
 	si := server.Service().LookupById(serverId)
 	if si == nil {
-		return echo.NewHTTPError(http.StatusNoContent, "Server not found")
+		return echo.NewHTTPError(http.StatusNoContent, common.ErrorResponse(http.StatusNoContent, fmt.Sprintf("Server %s not found", serverId)))
 	}
 
 	body := &request.ServerUpBodyRequest{}
 	err := json.NewDecoder(c.Request().Body).Decode(body)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
+		return echo.NewHTTPError(http.StatusBadRequest, common.ErrorResponse(http.StatusBadRequest, "Failed to decode body")).SetInternal(err)
 	}
 
 	si.SetDirectory(body.Directory)
@@ -41,7 +41,7 @@ func ServerUpRoute(c echo.Context) error {
 
 	initialTime := si.InitialTime()
 	if initialTime == 0 {
-		return echo.NewHTTPError(http.StatusBadRequest, "Server has not been created yet")
+		return echo.NewHTTPError(http.StatusBadRequest, common.ErrorResponse(http.StatusBadRequest, "Server has not been initialized"))
 	}
 
 	now := time.Now().UnixMilli()

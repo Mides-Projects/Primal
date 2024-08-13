@@ -13,12 +13,12 @@ import (
 func ServerDownRoute(c echo.Context) error {
 	serverId := c.Param("id")
 	if serverId == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "No ID found")
+		return echo.NewHTTPError(http.StatusBadRequest, common.ErrorResponse(http.StatusBadRequest, "No server ID found"))
 	}
 
 	i := server.Service().LookupById(serverId)
 	if i == nil {
-		return echo.NewHTTPError(http.StatusNoContent, fmt.Sprintf("Server %s not found", serverId))
+		return echo.NewHTTPError(http.StatusNoContent, common.ErrorResponse(http.StatusNoContent, fmt.Sprintf("Server %s not found", serverId)))
 	}
 
 	go func() {

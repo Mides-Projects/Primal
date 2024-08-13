@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/response"
 	"github.com/labstack/echo/v4"
@@ -11,7 +12,7 @@ import (
 func LookupServers(c echo.Context) error {
 	serverId := c.Param("id")
 	if serverId == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "No ID found")
+		return echo.NewHTTPError(http.StatusBadRequest, common.ErrorResponse(http.StatusBadRequest, "No server ID found"))
 	}
 
 	var responses []response.ServerInfoResponse
