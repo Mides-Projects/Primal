@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/server"
-	"github.com/holypvp/primal/server/object"
+	"github.com/holypvp/primal/server/model"
 	"github.com/holypvp/primal/server/pubsub"
 	"github.com/labstack/echo/v4"
 	"log"
@@ -39,7 +39,7 @@ func ServerCreateRoute(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusConflict, fmt.Sprintf("Port %d is already in use", portNum))
 	}
 
-	serverInfo = object.NewServerInfo(serverId, portNum)
+	serverInfo = model.NewServerInfo(serverId, portNum)
 	serverInfo.SetInitialTime(time.Now().UnixMilli())
 
 	server.Service().CacheServer(serverInfo)
