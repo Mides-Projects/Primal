@@ -33,9 +33,6 @@ func main() {
     common.LoadMongo(conf.MongoUri)
     common.LoadRedis(conf.RedisUri)
 
-    // server.Service().LoadGroups(database)
-    // server.Service().LoadServers(database)
-
     log.Println("App is running on port " + conf.Port + "...")
 
     go func() {
@@ -45,13 +42,4 @@ func main() {
         log.Println("Shutting down...")
         startup.Shutdown()
     }()
-
-    // route(router, "/players/{id}/lookup/{type}", playerRoute.LookupPlayer, "GET")
-    // route(router, "/players/save", playerRoute.SavePlayer, "POST")
-
-    // finally, instead of passing in nil, we want
-    // to pass in our newly created router as the second
-    // argument
-
-    // log.Fatal(http.ListenAndServe(":"+conf.Port, router))
 }
