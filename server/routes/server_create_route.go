@@ -49,15 +49,16 @@ func ServerCreateRoute(c echo.Context) error {
 	// Main thread ms = +133ms / Goroutine ms = 63ms average
 	// but small issue is I can't get the error from the goroutine
 	go func() {
-		server.SaveModel(serverInfo.ToModel())
+		if err = server.SaveModel(serverInfo.Id(), serverInfo.Marshal()); err != nil {
+			common.Log.Errorf("Failed to save server %s: %v", serverInfo.Id(), err)
+		}
 
 		payload, err := common.WrapPayload("API_SERVER_CREATE", pubsub.NewServerCreatePacket(serverId, portNum))
 		if err != nil {
 			log.Fatal("Failed to marshal packet: ", err)
 		}
 
-		err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
-		if err != nil {
+		if err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err(); err != nil {
 			log.Fatal("Failed to publish packet: ", err)
 		}
 	}()

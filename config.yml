@@ -1,7 +1,7 @@
-redis-uri: "redis://localhost:6379"
+redis-uri: "redis://play.infinitymcpe.com:6379"
 redis-channel: "Api"
 
-mongodb-uri: "mongodb://localhost:27017"
+mongodb-uri: "mongodb://mongoadmin:infinityadmin20230911@play.infinitymcpe.com:27017/admin"
 port: 3001
 
 key: "1b494414-19b1-497e-9259-b5be94092f22"

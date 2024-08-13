@@ -1,6 +1,8 @@
 package object
 
-import "github.com/holypvp/primal/server/model"
+import (
+	"fmt"
+)
 
 type ServerInfo struct {
 	id     string
@@ -217,15 +219,52 @@ func (i *ServerInfo) SetPlugins(plugins []string) {
 	i.plugins = plugins
 }
 
-func (i *ServerInfo) ToModel() model.ServerInfoModel {
-	return model.ServerInfoModel{
-		Id:          i.Id(),
-		Port:        i.Port(),
-		Groups:      i.Groups(),
-		MaxSlots:    i.MaxSlots(),
-		Heartbeat:   i.Heartbeat(),
-		BungeeCord:  i.BungeeCord(),
-		OnlineMode:  i.OnlineMode(),
-		InitialTime: i.InitialTime(),
+func Unmarshal(m map[string]interface{}) (*ServerInfo, error) {
+	id, ok := m["id"].(string)
+	if !ok {
+		return nil, fmt.Errorf("ServerInfo.Unmarshal: id is not a string")
+	}
+
+	port, ok := m["port"].(float64)
+	if !ok {
+		return nil, fmt.Errorf("ServerInfo.Unmarshal: port is not a float64")
+	}
+
+	i := NewServerInfo(id, int64(port))
+
+	if groups, ok := m["groups"].([]interface{}); ok {
+		for _, group := range groups {
+			i.AddGroup(group.(string))
+		}
+	}
+
+	if players, ok := m["players"].([]interface{}); ok {
+		for _, player := range players {
+			i.SetPlayers(append(i.Players(), player.(string)))
+		}
+	}
+
+	if plugins, ok := m["plugins"].([]interface{}); ok {
+		for _, plugin := range plugins {
+			i.SetPlugins(append(i.Plugins(), plugin.(string)))
+		}
+	}
+
+	if motd, ok := m["motd"].(string); ok {
+		i.SetMotd(motd)
+	}
+
+	if directory, ok := m["directory"].(string); ok {
+		i.SetDirectory(directory)
+	}
+
+	return i, nil
+}
+
+func (i *ServerInfo) Marshal() map[string]interface{} {
+	return map[string]interface{}{
+		"id":     i.Id(),
+		"port":   i.Port(),
+		"groups": i.Groups(),
 	}
 }

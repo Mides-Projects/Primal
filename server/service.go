@@ -1,15 +1,26 @@
 package server
 
 import (
+	"context"
+	"errors"
+	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/server/object"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/exp/maps"
 	"sync"
 )
 
-var inst = &service{
-	servers: make(map[string]*object.ServerInfo),
-	groups:  make(map[string]*object.ServerGroup),
-}
+var (
+	inst = &service{
+		servers: make(map[string]*object.ServerInfo),
+		groups:  make(map[string]*object.ServerGroup),
+	}
+
+	collectionServers *mongo.Collection
+	collectionGroups  *mongo.Collection
+)
 
 // Service is a service that provides server information.
 // It is used to cache server information and look up servers by their ID or port.
@@ -108,4 +119,69 @@ func (s *service) Groups() []*object.ServerGroup {
 // Service returns the server service instance.
 func Service() *service {
 	return inst
+}
+
+func LoadServers(db *mongo.Database) error {
+	if collectionServers != nil {
+		return errors.New("servers collection is already set")
+	}
+
+	if c := db.Collection("servers"); c != nil {
+		cursor, err := c.Find(context.TODO(), bson.D{{}})
+		if err != nil {
+			return errors.Join(errors.New("failed to load servers"), err)
+		}
+
+		for cursor.Next(context.Background()) {
+			var result map[string]interface{}
+			if err = cursor.Decode(result); err != nil {
+				return errors.Join(errors.New("failed to decode server"), err)
+			}
+
+			i, err := object.Unmarshal(result)
+			if err != nil {
+				return errors.Join(errors.New("failed to unmarshal server"), err)
+			}
+
+			inst.CacheServer(i)
+		}
+
+		if err := cursor.Err(); err != nil {
+			return errors.Join(errors.New("cursor error"), err)
+		}
+
+		if err = cursor.Close(context.TODO()); err != nil {
+			return errors.Join(errors.New("failed to close cursor"), err)
+		}
+
+		collectionServers = c
+
+		return nil
+	}
+
+	return errors.New("servers collection is nil")
+}
+
+func SaveModel(id string, m map[string]interface{}) error {
+	if collectionServers == nil {
+		return errors.New("servers collection is not set")
+	}
+
+	result, err := collectionServers.UpdateOne(
+		context.TODO(),
+		bson.D{{"_id", id}},
+		bson.D{{"$set", m}},
+		options.Update().SetUpsert(true),
+	)
+	if err != nil {
+		return errors.Join(errors.New("failed to update server"), err)
+	}
+
+	if result.UpsertedCount > 0 {
+		common.Log.Printf("Server %s was inserted", id)
+	} else {
+		common.Log.Printf("Server %s was updated", id)
+	}
+
+	return nil
 }
