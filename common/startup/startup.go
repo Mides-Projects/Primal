@@ -51,6 +51,9 @@ func loadServerRoutes(g *echo.Group, db *mongo.Database) {
 	if err := server.LoadServers(db); err != nil {
 		common.Log.Panicf("Failed to load servers: %v", err)
 	}
+	if err := server.LoadGroups(db); err != nil {
+		common.Log.Panicf("Failed to load server groups: %v", err)
+	}
 
 	g.POST("/:id/create/:port", server_routes.ServerCreateRoute)
 	g.GET("/:id/lookup", server_routes.LookupServers)

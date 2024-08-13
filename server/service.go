@@ -121,6 +121,30 @@ func Service() *service {
 	return inst
 }
 
+func SaveModel(id string, m map[string]interface{}) error {
+	if collectionServers == nil {
+		return errors.New("servers collection is not set")
+	}
+
+	result, err := collectionServers.UpdateOne(
+		context.TODO(),
+		bson.D{{"_id", id}},
+		bson.D{{"$set", m}},
+		options.Update().SetUpsert(true),
+	)
+	if err != nil {
+		return errors.Join(errors.New("failed to update server"), err)
+	}
+
+	if result.UpsertedCount > 0 {
+		common.Log.Printf("Server %s was inserted", id)
+	} else {
+		common.Log.Printf("Server %s was updated", id)
+	}
+
+	return nil
+}
+
 func LoadServers(db *mongo.Database) error {
 	if collectionServers != nil {
 		return errors.New("servers collection is already set")
@@ -134,7 +158,7 @@ func LoadServers(db *mongo.Database) error {
 
 		for cursor.Next(context.Background()) {
 			var result map[string]interface{}
-			if err = cursor.Decode(result); err != nil {
+			if err = cursor.Decode(&result); err != nil {
 				return errors.Join(errors.New("failed to decode server"), err)
 			}
 
@@ -162,26 +186,43 @@ func LoadServers(db *mongo.Database) error {
 	return errors.New("servers collection is nil")
 }
 
-func SaveModel(id string, m map[string]interface{}) error {
-	if collectionServers == nil {
-		return errors.New("servers collection is not set")
+func LoadGroups(database *mongo.Database) error {
+	if collectionGroups != nil {
+		return errors.New("server groups collection is already set")
 	}
 
-	result, err := collectionServers.UpdateOne(
-		context.TODO(),
-		bson.D{{"_id", id}},
-		bson.D{{"$set", m}},
-		options.Update().SetUpsert(true),
-	)
-	if err != nil {
-		return errors.Join(errors.New("failed to update server"), err)
+	if c := database.Collection("serverGroups"); c != nil {
+		cursor, err := c.Find(context.TODO(), bson.D{{}})
+		if err != nil {
+			return errors.Join(errors.New("failed to load server groups"), err)
+		}
+
+		for cursor.Next(context.Background()) {
+			var result map[string]interface{}
+			if err = cursor.Decode(&result); err != nil {
+				return errors.Join(errors.New("failed to decode server group"), err)
+			}
+
+			g := &object.ServerGroup{}
+			if err := g.Unmarshal(result); err != nil {
+				return errors.Join(errors.New("failed to unmarshal server group"), err)
+			}
+
+			inst.CacheGroup(g)
+		}
+
+		if err := cursor.Err(); err != nil {
+			return errors.Join(errors.New("cursor error"), err)
+		}
+
+		if err = cursor.Close(context.TODO()); err != nil {
+			return errors.Join(errors.New("failed to close cursor"), err)
+		}
+
+		collectionGroups = c
+
+		return nil
 	}
 
-	if result.UpsertedCount > 0 {
-		common.Log.Printf("Server %s was inserted", id)
-	} else {
-		common.Log.Printf("Server %s was updated", id)
-	}
-
-	return nil
+	return errors.New("server groups collection is nil")
 }
