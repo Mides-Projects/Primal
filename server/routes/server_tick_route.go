@@ -21,7 +21,7 @@ func ServerTickRoute(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNoContent, "Server not found")
 	}
 
-	body := &request.ServerTickBody{}
+	body := &request.ServerTickBodyRequest{}
 	err := json.NewDecoder(c.Request().Body).Decode(body)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")

@@ -24,7 +24,7 @@ func ServerUpRoute(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusNoContent, "Server not found")
 	}
 
-	body := &request.ServerUpBody{}
+	body := &request.ServerUpBodyRequest{}
 	err := json.NewDecoder(c.Request().Body).Decode(body)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
@@ -48,7 +48,11 @@ func ServerUpRoute(c echo.Context) error {
 	si.SetInitialTime(now)
 
 	// Save the server model in a goroutine to avoid blocking the main thread
-	go server.SaveModel(si.ToModel())
+	go func() {
+		if err = server.SaveModel(si.Id(), si.Marshal()); err != nil {
+			common.Log.Errorf("Failed to save server %s: %v", si.Id(), err)
+		}
+	}()
 
 	payload, err := common.WrapPayload("API_SERVER_UP", pubsub.NewServerStatusPacket(serverId))
 	if err != nil {

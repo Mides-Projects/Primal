@@ -1,6 +1,6 @@
 package request
 
-type ServerUpBody struct {
+type ServerUpBodyRequest struct {
 	Port int64 `json:"port"`
 
 	Directory string `json:"directory"`

@@ -1,6 +1,6 @@
 package request
 
-type ServerTickBody struct {
+type ServerTickBodyRequest struct {
 	PlayersCount   int      `json:"players-count"`
 	Heartbeat      int64    `json:"heartbeat"`
 	Players        []string `json:"players"`
