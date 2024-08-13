@@ -23,7 +23,7 @@ func LoadAll(now time.Time, port string) {
 	e.Use(middleware.Recover())
 	e.Use(common_middleware.HandleBasicAuth)
 
-	loadServerRoutes(e.Group("/v2/servers"), common.MongoClient.Database("server-monitor"))
+	loadServerRoutes(e.Group("/v2/servers"), common.MongoClient.Database("api"))
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()

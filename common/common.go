@@ -2,7 +2,6 @@ package common
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/labstack/echo/v4"
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -19,39 +18,34 @@ var (
 
 func LoadRedis(redisUrl string) {
 	if RedisClient != nil {
-		panic("Redis already loaded")
+		Log.Panic("Redis already loaded")
 	}
 
 	opt, err := redis.ParseURL(redisUrl)
 	if err != nil {
-		panic("Failed to parse Redis URL: " + err.Error())
+		Log.Panicf("Failed to parse Redis URL: %v", err)
 	}
 
 	RedisClient = redis.NewClient(opt)
-	_, err = RedisClient.Ping(context.Background()).Result()
-	if err != nil {
-		panic("Failed to ping Redis: " + err.Error())
+	if _, err = RedisClient.Ping(context.Background()).Result(); err != nil {
+		Log.Panicf("Failed to ping Redis: %v", err)
 	}
 }
 
 func LoadMongo(uri string) {
 	if MongoClient != nil {
-		panic("Mongo already loaded")
+		Log.Panic("MongoDB already loaded")
 	}
 
 	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(uri))
 	if err != nil {
-		panic("Failed to connect to MongoDB: " + err.Error())
+		Log.Panicf("Failed to connect to MongoDB: %v", err)
 	}
 
 	err = client.Ping(context.Background(), nil)
 	if err != nil {
-		panic("Failed to ping MongoDB: " + err.Error())
+		Log.Panicf("Failed to ping MongoDB: %v", err)
 	}
 
 	MongoClient = client
-}
-
-func WrapPayload(pid string, payload interface{}) ([]byte, error) {
-	return json.Marshal(NewPayload(pid, 0, payload))
 }

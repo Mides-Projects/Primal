@@ -27,3 +27,7 @@ func HTTPError(code int, message string) error {
 
 	return echo.NewHTTPError(code, string(result))
 }
+
+func WrapPayload(pid string, payload interface{}) ([]byte, error) {
+	return json.Marshal(NewPayload(pid, 0, payload))
+}
