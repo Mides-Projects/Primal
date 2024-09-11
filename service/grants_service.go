@@ -105,7 +105,7 @@ func (s *GrantsService) Save(srcId string, g *model.Grant) error {
 	}
 
 	body := g.Marshal()
-	body["source_xuid"] = srcId
+	body["source_id"] = srcId
 
 	_, err := s.col.UpdateOne(
 		context.TODO(),
