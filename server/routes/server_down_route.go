@@ -3,20 +3,20 @@ package routes
 import (
 	"context"
 	"fmt"
+	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
-	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/pubsub"
-	"github.com/labstack/echo/v4"
+	"github.com/holypvp/primal/service"
 	"net/http"
 )
 
-func ServerDownRoute(c echo.Context) error {
-	serverId := c.Param("id")
+func ServerDownRoute(c fiber.Ctx) error {
+	serverId := c.Params("id")
 	if serverId == "" {
 		return common.HTTPError(http.StatusBadRequest, "No server ID found")
 	}
 
-	i := server.Service().LookupById(serverId)
+	i := service.Server().LookupById(serverId)
 	if i == nil {
 		return common.HTTPError(http.StatusNoContent, fmt.Sprintf("Server %s not found", serverId))
 	}
@@ -33,5 +33,5 @@ func ServerDownRoute(c echo.Context) error {
 		}
 	}()
 
-	return c.String(http.StatusOK, fmt.Sprintf("Server %s is now down", i.Id()))
+	return c.Status(http.StatusOK).SendString(fmt.Sprintf("Server %s is now down", i.Id()))
 }

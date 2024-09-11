@@ -1,32 +1,34 @@
 package routes
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/bytedance/sonic"
+	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
-	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/pubsub"
 	"github.com/holypvp/primal/server/request"
+	"github.com/holypvp/primal/service"
 	"github.com/labstack/echo/v4"
 	"net/http"
 	"time"
 )
 
-func ServerUpRoute(c echo.Context) error {
-	serverId := c.Param("id")
+func ServerUpRoute(c fiber.Ctx) error {
+	serverId := c.Params("id")
 	if serverId == "" {
 		return common.HTTPError(http.StatusBadRequest, "No server ID found")
 	}
 
-	si := server.Service().LookupById(serverId)
+	si := service.Server().LookupById(serverId)
 	if si == nil {
 		return common.HTTPError(http.StatusNoContent, fmt.Sprintf("Server %s not found", serverId))
 	}
 
 	body := &request.ServerUpBodyRequest{}
-	err := json.NewDecoder(c.Request().Body).Decode(body)
+	err := sonic.ConfigDefault.NewDecoder(bytes.NewReader(c.Request().Body())).Decode(body)
 	if err != nil {
 		return common.HTTPError(http.StatusBadRequest, errors.Join(errors.New("failed to decode body"), err).Error())
 	}
@@ -50,7 +52,7 @@ func ServerUpRoute(c echo.Context) error {
 
 	// Save the server model in a goroutine to avoid blocking the main thread
 	go func() {
-		if err = server.SaveModel(si.Id(), si.Marshal()); err != nil {
+		if err = service.SaveModel(si.Id(), si.Marshal()); err != nil {
 			common.Log.Errorf("Failed to save server %s: %v", si.Id(), err)
 		}
 	}()
@@ -66,5 +68,5 @@ func ServerUpRoute(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to publish payload").SetInternal(err)
 	}
 
-	return c.String(http.StatusOK, fmt.Sprintf("Server %s is now back up. After %d ms", serverId, now-si.Heartbeat()))
+	return c.Status(http.StatusOK).SendString(fmt.Sprintf("Server %s is now back up. After %d ms", serverId, now-si.Heartbeat()))
 }

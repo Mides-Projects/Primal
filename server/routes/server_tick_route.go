@@ -1,29 +1,31 @@
 package routes
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
+	"github.com/bytedance/sonic"
+	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
-	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/request"
+	"github.com/holypvp/primal/service"
 	"github.com/labstack/echo/v4"
 	"net/http"
 )
 
-func ServerTickRoute(c echo.Context) error {
-	id := c.Param("id")
+func ServerTickRoute(c fiber.Ctx) error {
+	id := c.Params("id")
 	if id == "" {
 		return common.HTTPError(http.StatusBadRequest, "No server ID found")
 	}
 
-	serverInfo := server.Service().LookupById(id)
+	serverInfo := service.Server().LookupById(id)
 	if serverInfo == nil {
 		return common.HTTPError(http.StatusNoContent, "Server not found")
 	}
 
 	body := &request.ServerTickBodyRequest{}
-	err := json.NewDecoder(c.Request().Body).Decode(body)
+	err := sonic.ConfigDefault.NewDecoder(bytes.NewReader(c.Request().Body())).Decode(body)
 	if err != nil {
 		return common.HTTPError(http.StatusBadRequest, errors.Join(errors.New("failed to decode body"), err).Error())
 	}
@@ -50,5 +52,5 @@ func ServerTickRoute(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to publish payload").SetInternal(err)
 	}
 
-	return c.String(http.StatusOK, "Server ticked")
+	return c.Status(http.StatusOK).SendString("Server ticked")
 }

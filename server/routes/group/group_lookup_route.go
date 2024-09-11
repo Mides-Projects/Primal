@@ -1,8 +1,8 @@
 package group
 
 import (
-	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/response"
+	"github.com/holypvp/primal/service"
 	"github.com/labstack/echo/v4"
 	"net/http"
 )
@@ -15,7 +15,7 @@ func GroupLookupRoute(c echo.Context) error {
 	// 	return
 	// }
 	//
-	// serverInfo := server.Service().LookupById(serverId)
+	// serverInfo := server.Server().LookupById(serverId)
 	// if serverInfo == nil {
 	// 	http.Error(w, "Server not found", http.StatusNotFound)
 	//
@@ -23,7 +23,7 @@ func GroupLookupRoute(c echo.Context) error {
 	// }
 
 	var groupsResponse []response.ServerGroupResponse
-	for _, group := range server.Service().Groups() {
+	for _, group := range service.Server().Groups() {
 		groupsResponse = append(groupsResponse, response.ServerGroupResponse{
 			Id:                    group.Id(),
 			Metadata:              group.Metadata(),

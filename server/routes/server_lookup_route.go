@@ -1,22 +1,22 @@
 package routes
 
 import (
+	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
-	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/response"
-	"github.com/labstack/echo/v4"
+	"github.com/holypvp/primal/service"
 	"log"
 	"net/http"
 )
 
-func LookupServers(c echo.Context) error {
-	serverId := c.Param("id")
+func LookupServers(c fiber.Ctx) error {
+	serverId := c.Params("id")
 	if serverId == "" {
 		return common.HTTPError(http.StatusBadRequest, "No server ID found")
 	}
 
 	var responses []response.ServerInfoResponse
-	for _, serverInfo := range server.Service().Servers() {
+	for _, serverInfo := range service.Server().Servers() {
 		responses = append(responses, response.NewServerInfoResponse(serverInfo))
 	}
 
@@ -26,5 +26,5 @@ func LookupServers(c echo.Context) error {
 
 	log.Print("Server " + serverId + " has requested all servers")
 
-	return c.JSON(http.StatusOK, responses)
+	return c.Status(http.StatusOK).JSON(responses)
 }

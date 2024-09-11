@@ -1,4 +1,4 @@
-package server
+package service
 
 import (
 	"context"
@@ -12,21 +12,11 @@ import (
 	"sync"
 )
 
-var (
-	inst = &service{
-		servers: make(map[string]*model.ServerInfo),
-		groups:  make(map[string]*model.ServerGroup),
-	}
-
-	collectionServers *mongo.Collection
-	collectionGroups  *mongo.Collection
-)
-
-// Service is a service that provides server information.
+// ServerService is a service for managing servers and server groups.
 // It is used to cache server information and look up servers by their ID or port.
 // It is also used to cache server groups and look up server groups by their ID.
-// The service is thread-safe.
-type service struct {
+// The ServerService is thread-safe.
+type ServerService struct {
 	servers   map[string]*model.ServerInfo
 	serversMu sync.Mutex
 
@@ -35,7 +25,7 @@ type service struct {
 }
 
 // LookupById looks up a server by its ID.
-func (s *service) LookupById(id string) *model.ServerInfo {
+func (s *ServerService) LookupById(id string) *model.ServerInfo {
 	s.serversMu.Lock()
 	defer s.serversMu.Unlock()
 
@@ -48,7 +38,7 @@ func (s *service) LookupById(id string) *model.ServerInfo {
 }
 
 // LookupByPort looks up a server by its port.
-func (s *service) LookupByPort(port int64) *model.ServerInfo {
+func (s *ServerService) LookupByPort(port int64) *model.ServerInfo {
 	s.serversMu.Lock()
 	defer s.serversMu.Unlock()
 
@@ -61,21 +51,21 @@ func (s *service) LookupByPort(port int64) *model.ServerInfo {
 	return nil
 }
 
-// CacheServer caches a server in the service.
-func (s *service) CacheServer(server *model.ServerInfo) {
+// CacheServer caches a server in the ServerService.
+func (s *ServerService) CacheServer(server *model.ServerInfo) {
 	s.serversMu.Lock()
 	s.servers[server.Id()] = server
 	s.serversMu.Unlock()
 }
 
 // DestroyServer removes a server from the cache.
-func (s *service) DestroyServer(id string) {
+func (s *ServerService) DestroyServer(id string) {
 	s.serversMu.Lock()
 	delete(s.servers, id)
 	s.serversMu.Unlock()
 }
 
-func (s *service) Servers() []*model.ServerInfo {
+func (s *ServerService) Servers() []*model.ServerInfo {
 	s.serversMu.Lock()
 	defer s.serversMu.Unlock()
 
@@ -83,7 +73,7 @@ func (s *service) Servers() []*model.ServerInfo {
 }
 
 // LookupGroupById looks up a server group by its ID.
-func (s *service) LookupGroupById(id string) *model.ServerGroup {
+func (s *ServerService) LookupGroupById(id string) *model.ServerGroup {
 	s.groupsMu.Lock()
 	defer s.groupsMu.Unlock()
 
@@ -95,30 +85,25 @@ func (s *service) LookupGroupById(id string) *model.ServerGroup {
 	return group
 }
 
-// CacheGroup caches a server group in the service.
-func (s *service) CacheGroup(group *model.ServerGroup) {
+// CacheGroup caches a server group in the ServerService.
+func (s *ServerService) CacheGroup(group *model.ServerGroup) {
 	s.groupsMu.Lock()
 	s.groups[group.Id()] = group
 	s.groupsMu.Unlock()
 }
 
 // DestroyGroup removes a server group from the cache.
-func (s *service) DestroyGroup(id string) {
+func (s *ServerService) DestroyGroup(id string) {
 	s.groupsMu.Lock()
 	delete(s.groups, id)
 	s.groupsMu.Unlock()
 }
 
-func (s *service) Groups() []*model.ServerGroup {
+func (s *ServerService) Groups() []*model.ServerGroup {
 	s.groupsMu.Lock()
 	defer s.groupsMu.Unlock()
 
 	return maps.Values(s.groups)
-}
-
-// Service returns the server service instance.
-func Service() *service {
-	return inst
 }
 
 func SaveModel(id string, m map[string]interface{}) error {
@@ -167,7 +152,7 @@ func LoadServers(db *mongo.Database) error {
 				return errors.Join(errors.New("failed to unmarshal server"), err)
 			}
 
-			inst.CacheServer(i)
+			serverService.CacheServer(i)
 		}
 
 		if err := cursor.Err(); err != nil {
@@ -208,7 +193,7 @@ func LoadGroups(database *mongo.Database) error {
 				return errors.Join(errors.New("failed to unmarshal server group"), err)
 			}
 
-			inst.CacheGroup(g)
+			serverService.CacheGroup(g)
 		}
 
 		if err := cursor.Err(); err != nil {
@@ -226,3 +211,18 @@ func LoadGroups(database *mongo.Database) error {
 
 	return errors.New("server groups collection is nil")
 }
+
+// Server returns the server ServerService instance.
+func Server() *ServerService {
+	return serverService
+}
+
+var (
+	serverService = &ServerService{
+		servers: make(map[string]*model.ServerInfo),
+		groups:  make(map[string]*model.ServerGroup),
+	}
+
+	collectionServers *mongo.Collection
+	collectionGroups  *mongo.Collection
+)
