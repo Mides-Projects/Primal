@@ -29,15 +29,40 @@ func (s *GrantsService) Lookup(id string) (*model.GrantsAccount, error) {
 		return ga, nil
 	}
 
-	var body map[string]interface{}
-	if err := s.col.FindOne(context.Background(), bson.M{"_id": id}).Decode(&body); err != nil {
+	if s.col == nil {
+		return nil, errors.New("service not hooked to the database")
+	}
+
+	cur, err := s.col.Find(context.Background(), bson.M{"source_id": id})
+	if err != nil {
 		return nil, err
 	}
 
-	ga := &model.GrantsAccount{}
-	if err := ga.Unmarshal(body); err != nil {
+	acc, err := accountService.Fetch(id)
+	if err != nil {
 		return nil, err
 	}
+
+	ga := model.EmptyGrantsAccount(acc)
+	for cur.Next(context.Background()) {
+		var body map[string]interface{}
+		if err := cur.Decode(&body); err != nil {
+			return nil, err
+		}
+
+		g := &model.Grant{}
+		if err := g.Unmarshal(body); err != nil {
+			return nil, err
+		}
+
+		if g.Expired() {
+			ga.AddExpiredGrant(g)
+		} else {
+			ga.AddActiveGrant(g)
+		}
+	}
+
+	s.Cache(ga)
 
 	return ga, nil
 }

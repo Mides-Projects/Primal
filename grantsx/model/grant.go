@@ -45,6 +45,14 @@ func (g *Grant) ExpiresAt() string {
 	return g.expiresAt
 }
 
+func (g *Grant) Expired() bool {
+	if g.expiresAt == "" {
+		return false
+	}
+
+	return false
+}
+
 // RevokedBy returns the ID of the player who revoked the grant.
 func (g *Grant) RevokedBy() string {
 	return g.revokedBy
@@ -83,15 +91,17 @@ func (g *Grant) Marshal() map[string]interface{} {
 func (g *Grant) Unmarshal(body map[string]interface{}) error {
 	id, ok := body["_id"].(string)
 	if !ok {
-		return errors.New("id is not a string")
+		return errors.New("_id is not a string")
 	}
 	g.id = id
 
-	identifier, err := UnmarshalIdentifier(body)
-	if err != nil {
+	if idBody, ok := body["identifier"].(map[string]interface{}); !ok {
+		return errors.New("identifier is not a map")
+	} else if identifier, err := UnmarshalIdentifier(idBody); err != nil {
 		return err
+	} else {
+		g.identifier = identifier
 	}
-	g.identifier = identifier
 
 	addedBy, ok := body["added_by"].(string)
 	if !ok {
@@ -129,11 +139,9 @@ func (g *Grant) Unmarshal(body map[string]interface{}) error {
 	}
 	g.reason = reason
 
-	scopes, ok := body["scopes"].([]string)
-	if !ok {
-		return errors.New("scopes is not a string array")
+	if scopes, ok := body["scopes"].([]string); ok {
+		g.scopes = scopes
 	}
-	g.scopes = scopes
 
 	return nil
 }

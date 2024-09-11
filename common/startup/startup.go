@@ -75,6 +75,8 @@ func loadServerRoutes(g *echo.Group, db *mongo.Database) {
 func loadGrantsX(e *echo.Echo, db *mongo.Database) error {
 	if err := service.Groups().Hook(db); err != nil {
 		return err
+	} else if err := service.Grants().Hook(db); err != nil {
+		return err
 	}
 
 	g := e.Group("/v2/groups")
