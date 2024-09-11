@@ -16,16 +16,19 @@ type GrantsService struct {
 	col *mongo.Collection
 }
 
-// LookupAtCache retrieves a GrantsAccount from the cache by its ID.
-func (s *GrantsService) LookupAtCache(id string) *model.GrantsAccount {
+// Lookup retrieves a GrantsAccount from the cache by its ID.
+func (s *GrantsService) Lookup(id string) *model.GrantsAccount {
 	s.accountsMu.RLock()
 	defer s.accountsMu.RUnlock()
 
 	return s.accounts[id]
 }
 
-func (s *GrantsService) Lookup(id string) (*model.GrantsAccount, error) {
-	if ga := s.LookupAtCache(id); ga != nil {
+// UnsafeLookup retrieves a GrantsAccount from the cache by its ID.
+// If the account is not found in the cache, it will be fetched from the database.
+// This method is not thread-safe and should be used with caution in goroutines.
+func (s *GrantsService) UnsafeLookup(id string) (*model.GrantsAccount, error) {
+	if ga := s.Lookup(id); ga != nil {
 		return ga, nil
 	}
 

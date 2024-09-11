@@ -52,14 +52,14 @@ func GrantsLookupRoute(c fiber.Ctx) error {
 		return common.HTTPError(c, http.StatusNotFound, "Player not found")
 	}
 
-	ga, err := service.Grants().Lookup(acc.Id())
+	ga, err := service.Grants().UnsafeLookup(acc.Id())
 	if err != nil {
 		return common.HTTPError(c, http.StatusInternalServerError, "Failed to lookup grant: "+err.Error())
 	} else if ga == nil {
 		return common.HTTPError(c, http.StatusNotFound, "Player not found")
 	}
 
-	if state == "online" && service.Grants().LookupAtCache(ga.Account().Id()) == nil {
+	if state == "online" && service.Grants().Lookup(ga.Account().Id()) == nil {
 		service.Grants().Cache(ga)
 	}
 

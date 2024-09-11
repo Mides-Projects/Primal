@@ -14,11 +14,6 @@ func GrantsCreateRoute(c fiber.Ctx) error {
 		return common.HTTPError(c, http.StatusBadRequest, "No name found for the player")
 	}
 
-	acc := service.Account().LookupByName(name)
-	if acc == nil {
-		return common.HTTPError(c, http.StatusNotFound, "Player not found")
-	}
-
 	var body map[string]interface{}
 	if err := c.Bind().Body(&body); err != nil {
 		return common.HTTPError(c, http.StatusBadRequest, "Failed to bind request body: "+err.Error())
@@ -29,20 +24,7 @@ func GrantsCreateRoute(c fiber.Ctx) error {
 		return common.HTTPError(c, http.StatusBadRequest, "Failed to unmarshal grant: "+err.Error())
 	}
 
-	ga, err := service.Grants().Lookup(acc.Id())
-	if err != nil {
-		return common.HTTPError(c, http.StatusInternalServerError, "Failed to lookup grant: "+err.Error())
-	}
-
-	if ga == nil {
-		return common.HTTPError(c, http.StatusNotFound, "Player not found")
-	}
-
-	if ga.Account().Id() != acc.Id() {
-		return common.HTTPError(c, http.StatusConflict, "Player ID mismatch")
-	}
-
-	gaAdder := service.Grants().LookupAtCache(g.AddedBy())
+	gaAdder := service.Grants().Lookup(g.AddedBy())
 	if gaAdder == nil {
 		return common.HTTPError(c, http.StatusNotFound, "Grants for source adder not found (Not cached)")
 	}
@@ -54,6 +36,28 @@ func GrantsCreateRoute(c fiber.Ctx) error {
 	hgAdder := service.Grants().HighestGroupBy(gaAdder)
 	if hgAdder == nil {
 		return common.HTTPError(c, http.StatusNotFound, "Highest group not found for who added the grant")
+	}
+
+	// Retrieve the account of the player from our redis cache
+	// but if they are online, we can fetch it from the RAM Cache
+	acc, err := service.Account().UnsafeLookupByName(name)
+	if err != nil {
+		return common.HTTPError(c, http.StatusInternalServerError, "Failed to lookup account: "+err.Error())
+	} else if acc == nil {
+		return common.HTTPError(c, http.StatusNotFound, "Player not found")
+	}
+
+	ga, err := service.Grants().UnsafeLookup(acc.Id())
+	if err != nil {
+		return common.HTTPError(c, http.StatusInternalServerError, "Failed to lookup grant: "+err.Error())
+	}
+
+	if ga == nil {
+		return common.HTTPError(c, http.StatusNotFound, "Player not found")
+	}
+
+	if ga.Account().Id() != acc.Id() {
+		return common.HTTPError(c, http.StatusConflict, "Player ID mismatch")
 	}
 
 	hg := service.Grants().HighestGroupBy(ga)
