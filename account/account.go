@@ -9,12 +9,14 @@ import (
 type Account struct {
 	id string // ID of account
 
-	name     string // The name of account
-	lastName string // The last name of account
+	name        string // The name of account
+	lastName    string // The last name of account
+	displayName string // The display name of account
 
 	operator bool // Operator of account
 	online   bool // Online status of account
 
+	highestGroup  string // Highest group of account
 	currentServer string // Current server of account
 }
 
@@ -43,6 +45,16 @@ func (a *Account) SetLastName(lastName string) {
 	a.lastName = lastName
 }
 
+// DisplayName returns the display name of the account.
+func (a *Account) DisplayName() string {
+	return a.displayName
+}
+
+// SetDisplayName sets the display name of the account.
+func (a *Account) SetDisplayName(displayName string) {
+	a.displayName = displayName
+}
+
 // Operator returns the operator of the account.
 func (a *Account) Operator() bool {
 	return a.operator
@@ -61,6 +73,16 @@ func (a *Account) Online() bool {
 // SetOnline sets the online status of the account.
 func (a *Account) SetOnline(online bool) {
 	a.online = online
+}
+
+// HighestGroup returns the highest group of the account.
+func (a *Account) HighestGroup() string {
+	return a.highestGroup
+}
+
+// SetHighestGroup sets the highest group of the account.
+func (a *Account) SetHighestGroup(group string) {
+	a.highestGroup = group
 }
 
 // CurrentServer returns the current server of the account.
