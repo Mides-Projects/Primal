@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/keyauth"
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
+	accRoutes "github.com/holypvp/primal/account/routes"
 	"github.com/holypvp/primal/common"
 	grantRoutes "github.com/holypvp/primal/grantsx/routes"
 	srvRoutes "github.com/holypvp/primal/server/routes"
@@ -64,6 +65,7 @@ func Hook(db *mongo.Database) error {
 
 	grantRoutes.Hook(app)
 	srvRoutes.Hook(app)
+	accRoutes.Hook(app)
 
 	defer func(app *fiber.App) {
 		err := app.Shutdown()
