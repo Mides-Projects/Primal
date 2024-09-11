@@ -1,66 +1,91 @@
 package routes
 
 import (
-    "github.com/gofiber/fiber/v3"
-    "github.com/holypvp/primal/account"
-    "github.com/holypvp/primal/common"
-    "github.com/holypvp/primal/service"
-    "net/http"
+	"github.com/gofiber/fiber/v3"
+	"github.com/holypvp/primal/account"
+	"github.com/holypvp/primal/common"
+	"github.com/holypvp/primal/service"
+	"net/http"
 )
 
 func AccountJoinRoute(c fiber.Ctx) error {
-    id := c.Params("id")
-    if id == "" {
-        return common.HTTPError(c, http.StatusBadRequest, "No account ID found")
-    }
+	id := c.Params("id")
+	if id == "" {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "Missing 'id' parameter",
+			"code":    http.StatusBadRequest,
+		})
+	}
 
-    name := c.Query("name")
-    if name == "" {
-        return common.HTTPError(c, http.StatusBadRequest, "No account name found")
-    }
+	serverName := c.Params("server")
+	if serverName == "" {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "Missing 'server' parameter",
+			"code":    http.StatusBadRequest,
+		})
+	}
 
-    var (
-        acc *account.Account
-        err error
-    )
+	name := c.Query("name")
+	if name == "" {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "Missing 'name' query parameter",
+			"code":    http.StatusBadRequest,
+		})
+	}
 
-    acc = service.Account().LookupById(id)
-    if acc == nil {
-        acc, err = service.Account().UnsafeLookupById(id)
-    }
+	var (
+		acc *account.Account
+		err error
+	)
 
-    if err != nil {
-        return common.HTTPError(c, http.StatusInternalServerError, "Failed to lookup account: "+err.Error())
-    }
+	acc = service.Account().LookupById(id)
+	if acc == nil {
+		acc, err = service.Account().UnsafeLookupById(id)
+	}
 
-    if acc == nil {
-        acc = account.Empty(id, "")
-    }
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to lookup account: " + err.Error(),
+			"code":    http.StatusInternalServerError,
+		})
+	}
 
-    if acc.Name() != name {
-        if acc.Name() != "" {
-            service.Account().UpdateName(acc.Name(), name, acc.Id())
-        } else {
-            service.Account().Cache(acc)
-        }
+	if acc == nil {
+		acc = account.Empty(id, "")
+	}
 
-        acc.SetLastName(acc.Name())
-        acc.SetName(name)
+	if acc.Name() != name {
+		if acc.Name() != "" {
+			service.Account().UpdateName(acc.Name(), name, acc.Id())
+		} else {
+			service.Account().Cache(acc)
+		}
 
-        go func() {
-            if err = service.Account().Update(acc); err != nil {
-                common.Log.Fatalf("Failed to update account: %s", err)
-            }
-        }()
-    }
+		acc.SetLastName(acc.Name())
+		acc.SetName(name)
 
-    acc.SetOnline(true)
+		go func() {
+			if err = service.Account().Update(acc); err != nil {
+				common.Log.Fatalf("Failed to update account: %s", err)
+			}
+		}()
+	}
 
-    return c.Status(http.StatusOK).JSON(acc)
+	if !acc.Online() {
+		// TODO: Publish to the redis channel because the player joined!
+	} else if acc.CurrentServer() != serverName {
+		// TODO: Publish to the redis channel because the player switched servers!
+	}
+
+	// Mark the account as online and set the current server
+	acc.SetCurrentServer(serverName)
+	acc.SetOnline(true)
+
+	return c.Status(http.StatusOK).JSON(acc)
 }
 
 // Hook registers the route to the app
 func Hook(app *fiber.App) {
-    g := app.Group("/v1/account")
-    g.Get("/:id/join/:name", AccountJoinRoute)
+	g := app.Group("/v1/account")
+	g.Get("/:id/join/:name", AccountJoinRoute)
 }

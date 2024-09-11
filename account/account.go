@@ -14,6 +14,8 @@ type Account struct {
 
 	operator bool // Operator of account
 	online   bool // Online status of account
+
+	currentServer string // Current server of account
 }
 
 // Id returns the ID of the account.
@@ -61,6 +63,16 @@ func (a *Account) SetOnline(online bool) {
 	a.online = online
 }
 
+// CurrentServer returns the current server of the account.
+func (a *Account) CurrentServer() string {
+	return a.currentServer
+}
+
+// SetCurrentServer sets the current server of the account.
+func (a *Account) SetCurrentServer(server string) {
+	a.currentServer = server
+}
+
 // Marshal returns the account as a map.
 func (a *Account) Marshal() map[string]interface{} {
 	return map[string]interface{}{
@@ -68,7 +80,6 @@ func (a *Account) Marshal() map[string]interface{} {
 		"name":      a.name,
 		"last_name": a.lastName,
 		"operator":  a.operator,
-		"online":    a.online,
 	}
 }
 
@@ -98,33 +109,28 @@ func (a *Account) Unmarshal(body map[string]interface{}) error {
 	}
 	a.operator = operator
 
-	online, ok := body["online"].(bool)
-	if !ok {
-		return errors.New("online is not a bool")
-	}
-	a.online = online
-
 	return nil
 }
 
 // UnmarshalString unmarshals the account from a string.
 func (a *Account) UnmarshalString(result string) error {
 	body := strings.Split(result, ":")
-	if len(body) != 5 {
-		return errors.New("invalid body")
+	if len(body) != 4 {
+		return errors.New("body is more than 4 elements")
 	}
 
 	a.id = body[0]
 	a.name = body[1]
 	a.lastName = body[2]
 	a.operator = body[3] == "true"
-	a.online = body[4] == "true"
+	a.online = false
 
 	return nil
 }
 
+// MarshalString marshals the account to a string.
 func (a *Account) MarshalString() string {
-	return a.id + ":" + a.name + ":" + a.lastName + ":" + strconv.FormatBool(a.operator) + ":" + strconv.FormatBool(a.online)
+	return a.id + ":" + a.name + ":" + a.lastName + ":" + strconv.FormatBool(a.operator)
 }
 
 // Empty returns an empty account.
