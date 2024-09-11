@@ -42,10 +42,53 @@ func (s *GrantsService) Lookup(id string) (*model.GrantsAccount, error) {
 	return ga, nil
 }
 
+// HighestGroupBy retrieves the highest group by its ID.
+func (s *GrantsService) HighestGroupBy(ga *model.GrantsAccount) *model.Group {
+	var highest *model.Group
+	for _, gr := range ga.ActiveGrants() {
+		if gr.Identifier().Key() != "group" {
+			continue
+		}
+
+		g := groupsService.LookupById(gr.Identifier().Value())
+		if g == nil {
+			continue
+		}
+
+		if highest == nil || g.Weight() > highest.Weight() {
+			highest = g
+		}
+	}
+
+	return highest
+}
+
+// Cache caches a GrantsAccount.
 func (s *GrantsService) Cache(ga *model.GrantsAccount) {
 	s.accountsMu.Lock()
 	s.accounts[ga.Account().Id()] = ga
 	s.accountsMu.Unlock()
+}
+
+// Save saves a grant.
+func (s *GrantsService) Save(srcId string, g *model.Grant) error {
+	if s.col == nil {
+		return errors.New("service not hooked to the database")
+	}
+
+	body := g.Marshal()
+	body["source_xuid"] = srcId
+
+	_, err := s.col.UpdateOne(
+		context.TODO(),
+		bson.M{"_id": g.Id()},
+		bson.M{"_set": body},
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *GrantsService) Hook(db *mongo.Database) error {
@@ -54,25 +97,6 @@ func (s *GrantsService) Hook(db *mongo.Database) error {
 	}
 
 	s.col = db.Collection("grants")
-
-	cur, err := s.col.Find(context.Background(), bson.D{})
-	if err != nil {
-		return err
-	}
-
-	for cur.Next(context.Background()) {
-		var body map[string]interface{}
-		if err := cur.Decode(&body); err != nil {
-			return err
-		}
-
-		ga := &model.GrantsAccount{}
-		if err := ga.Unmarshal(body); err != nil {
-			return err
-		}
-
-		s.Cache(ga)
-	}
 
 	return nil
 }
