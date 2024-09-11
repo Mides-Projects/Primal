@@ -1,17 +1,14 @@
 package routes
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/server/pubsub"
 	"github.com/holypvp/primal/server/request"
 	"github.com/holypvp/primal/service"
-	"github.com/labstack/echo/v4"
 	"net/http"
 	"time"
 )
@@ -19,18 +16,17 @@ import (
 func ServerUpRoute(c fiber.Ctx) error {
 	serverId := c.Params("id")
 	if serverId == "" {
-		return common.HTTPError(http.StatusBadRequest, "No server ID found")
+		return common.HTTPError(c, http.StatusBadRequest, "No server ID found")
 	}
 
 	si := service.Server().LookupById(serverId)
 	if si == nil {
-		return common.HTTPError(http.StatusNoContent, fmt.Sprintf("Server %s not found", serverId))
+		return common.HTTPError(c, http.StatusNoContent, fmt.Sprintf("Server %s not found", serverId))
 	}
 
 	body := &request.ServerUpBodyRequest{}
-	err := sonic.ConfigDefault.NewDecoder(bytes.NewReader(c.Request().Body())).Decode(body)
-	if err != nil {
-		return common.HTTPError(http.StatusBadRequest, errors.Join(errors.New("failed to decode body"), err).Error())
+	if err := c.Bind().Body(body); err != nil {
+		return common.HTTPError(c, http.StatusBadRequest, errors.Join(errors.New("failed to decode body"), err).Error())
 	}
 
 	si.SetDirectory(body.Directory)
@@ -44,7 +40,7 @@ func ServerUpRoute(c fiber.Ctx) error {
 
 	initialTime := si.InitialTime()
 	if initialTime == 0 {
-		return common.HTTPError(http.StatusBadRequest, "Server has not been initialized")
+		return common.HTTPError(c, http.StatusBadRequest, "Server has not been initialized")
 	}
 
 	now := time.Now().UnixMilli()
@@ -52,20 +48,20 @@ func ServerUpRoute(c fiber.Ctx) error {
 
 	// Save the server model in a goroutine to avoid blocking the main thread
 	go func() {
-		if err = service.SaveModel(si.Id(), si.Marshal()); err != nil {
-			common.Log.Errorf("Failed to save server %s: %v", si.Id(), err)
+		if err := service.SaveModel(si.Id(), si.Marshal()); err != nil {
+			common.Log.Fatalf("Failed to save server %s: %v", si.Id(), err)
 		}
 	}()
 
 	payload, err := common.WrapPayload("API_SERVER_UP", pubsub.NewServerStatusPacket(serverId))
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to wrap payload").SetInternal(err)
+		return common.HTTPError(c, http.StatusInternalServerError, "Failed to wrap payload")
 	}
 
 	// TODO: Maybe we need do the publish in a goroutine too
 	err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to publish payload").SetInternal(err)
+		return common.HTTPError(c, http.StatusInternalServerError, "Failed to publish payload")
 	}
 
 	return c.Status(http.StatusOK).SendString(fmt.Sprintf("Server %s is now back up. After %d ms", serverId, now-si.Heartbeat()))

@@ -2,10 +2,10 @@ package common
 
 import (
 	"context"
-	"github.com/labstack/echo/v4"
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"log"
 )
 
 var (
@@ -13,7 +13,7 @@ var (
 	MongoClient  *mongo.Client = nil
 	RedisChannel string
 	APIKey       string
-	Log          echo.Logger
+	Log          *log.Logger
 )
 
 func LoadRedis(redisUrl string) {

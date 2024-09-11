@@ -1,57 +1,57 @@
 package routes
 
 import (
+	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/service"
-	"github.com/labstack/echo/v4"
 	"net/http"
 )
 
-func GrantsLookupRoute(e echo.Context) error {
-	t := e.Param("type")
+func GrantsLookupRoute(c fiber.Ctx) error {
+	t := c.Params("type")
 	if t != "" && t != "active" && t != "expired" {
-		return common.HTTPError(http.StatusBadRequest, "Invalid type")
+		return common.HTTPError(c, http.StatusBadRequest, "Invalid type")
 	}
 
-	src := e.QueryParam("src")
+	src := c.Query("src")
 	if src == "" {
-		return common.HTTPError(http.StatusBadRequest, "Missing 'src' query parameter")
+		return common.HTTPError(c, http.StatusBadRequest, "Missing 'src' query parameter")
 	}
 
 	if src != "name" && src != "id" {
-		return common.HTTPError(http.StatusBadRequest, "No valid source found")
+		return common.HTTPError(c, http.StatusBadRequest, "No valid source found")
 	}
 
-	state := e.QueryParam("state")
+	state := c.Query("state")
 	if state == "" {
-		return common.HTTPError(http.StatusBadRequest, "Missing 'state' query parameter")
+		return common.HTTPError(c, http.StatusBadRequest, "Missing 'state' query parameter")
 	}
 
 	if state != "online" && state != "offline" {
-		return common.HTTPError(http.StatusBadRequest, "Invalid state")
+		return common.HTTPError(c, http.StatusBadRequest, "Invalid state")
 	}
 
-	v := e.Param("value")
+	v := c.Params("value")
 	if src == "name" {
 		v = service.Account().FetchAccountId(v)
 	}
 
 	if v == "" {
-		return common.HTTPError(http.StatusBadRequest, "Missing 'id' into our database")
+		return common.HTTPError(c, http.StatusBadRequest, "Missing 'id' into our database")
 	}
 
 	ga, err := service.Grants().Lookup(v)
 	if err != nil {
-		return common.HTTPError(http.StatusInternalServerError, "Failed to lookup grant: "+err.Error())
+		return common.HTTPError(c, http.StatusInternalServerError, "Failed to lookup grant: "+err.Error())
 	} else if ga == nil {
-		return common.HTTPError(http.StatusNotFound, "Player not found")
+		return common.HTTPError(c, http.StatusNotFound, "Player not found")
 	}
 
 	if state == "online" && service.Grants().LookupAtCache(ga.Account().Id()) == nil {
 		service.Grants().Cache(ga)
 	}
 
-	return e.JSON(http.StatusOK, marshalByType(t, ga.Marshal()))
+	return c.Status(http.StatusOK).JSON(marshalByType(t, ga.Marshal()))
 }
 
 func marshalByType(t string, body map[string]interface{}) map[string]interface{} {

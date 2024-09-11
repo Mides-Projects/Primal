@@ -2,7 +2,7 @@ package common
 
 import (
 	"encoding/json"
-	"github.com/labstack/echo/v4"
+	"github.com/gofiber/fiber/v3"
 )
 
 type Payload struct {
@@ -24,8 +24,8 @@ type HTTPErrorPayload struct {
 	Message string `json:"message"`
 }
 
-func HTTPError(code int, message string) error {
-	return echo.NewHTTPError(code, HTTPErrorPayload{
+func HTTPError(c fiber.Ctx, code int, message string) error {
+	return c.Status(code).JSON(HTTPErrorPayload{
 		Code:    code,
 		Message: message,
 	})

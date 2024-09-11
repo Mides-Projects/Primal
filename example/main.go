@@ -3,10 +3,10 @@ package main
 import (
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/common/config"
-	"github.com/holypvp/primal/common/startup"
+	"github.com/holypvp/primal/startup"
 	"gopkg.in/yaml.v2"
+	"log"
 	"os"
-	"time"
 )
 
 func main() {
@@ -21,14 +21,15 @@ func main() {
 		panic("config.yml is invalid")
 	}
 
+	common.Log = log.New(os.Stdout, "Primal", log.LstdFlags)
+
 	common.RedisChannel = conf.RedisChannel
 	common.APIKey = conf.Key
 
 	common.LoadMongo(conf.MongoUri)
 	common.LoadRedis(conf.RedisUri)
 
-	// Here I have a problem because startup depends of MongoDB and MongoDB depends on echo.Logger
-	startup.LoadAll(time.Now(), conf.Port)
+	db := common.MongoClient.Database("api")
 
-	startup.Shutdown()
+	log.Fatal(startup.Hook(db))
 }

@@ -1,33 +1,29 @@
 package routes
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/server/request"
 	"github.com/holypvp/primal/service"
-	"github.com/labstack/echo/v4"
 	"net/http"
 )
 
 func ServerTickRoute(c fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
-		return common.HTTPError(http.StatusBadRequest, "No server ID found")
+		return common.HTTPError(c, http.StatusBadRequest, "No server ID found")
 	}
 
 	serverInfo := service.Server().LookupById(id)
 	if serverInfo == nil {
-		return common.HTTPError(http.StatusNoContent, "Server not found")
+		return common.HTTPError(c, http.StatusNoContent, "Server not found")
 	}
 
 	body := &request.ServerTickBodyRequest{}
-	err := sonic.ConfigDefault.NewDecoder(bytes.NewReader(c.Request().Body())).Decode(body)
-	if err != nil {
-		return common.HTTPError(http.StatusBadRequest, errors.Join(errors.New("failed to decode body"), err).Error())
+	if err := c.Bind().Body(body); err != nil {
+		return common.HTTPError(c, http.StatusBadRequest, errors.Join(errors.New("failed to decode body"), err).Error())
 	}
 
 	serverInfo.SetPlayersCount(body.PlayersCount)
@@ -44,12 +40,12 @@ func ServerTickRoute(c fiber.Ctx) error {
 	// so I prefer make the wrapper and publish in a goroutine
 	payload, err := common.WrapPayload("API_SERVER_TICK", body)
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to wrap payload").SetInternal(err)
+		return common.HTTPError(c, http.StatusInternalServerError, "Failed to wrap payload")
 	}
 
 	err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to publish payload").SetInternal(err)
+		return common.HTTPError(c, http.StatusInternalServerError, "Failed to publish payload")
 	}
 
 	return c.Status(http.StatusOK).SendString("Server ticked")

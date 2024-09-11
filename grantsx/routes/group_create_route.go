@@ -1,21 +1,21 @@
 package routes
 
 import (
+	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/grantsx/model"
 	"github.com/holypvp/primal/service"
-	"github.com/labstack/echo/v4"
 	"net/http"
 )
 
-func GroupCreateRoute(c echo.Context) error {
-	name := c.Param("name")
+func groupCreateRoute(c fiber.Ctx) error {
+	name := c.Params("name")
 	if name == "" {
-		return common.HTTPError(http.StatusBadRequest, "No group name found")
+		return common.HTTPError(c, http.StatusBadRequest, "No group name found")
 	}
 
 	if service.Groups().LookupByName(name) != nil {
-		return common.HTTPError(http.StatusConflict, "Group already exists")
+		return common.HTTPError(c, http.StatusConflict, "Group already exists")
 	}
 
 	g := model.EmptyGroup(name)
@@ -23,9 +23,9 @@ func GroupCreateRoute(c echo.Context) error {
 
 	go func() {
 		if err := service.Groups().Save(g); err != nil {
-			common.Log.Errorf("Failed to save group: %v", err)
+			common.Log.Fatalf("Failed to save group: %v", err)
 		}
 	}()
 
-	return c.JSON(http.StatusOK, g)
+	return c.Status(http.StatusOK).JSON(g)
 }

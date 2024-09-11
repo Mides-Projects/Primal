@@ -12,7 +12,7 @@ import (
 func LookupServers(c fiber.Ctx) error {
 	serverId := c.Params("id")
 	if serverId == "" {
-		return common.HTTPError(http.StatusBadRequest, "No server ID found")
+		return common.HTTPError(c, http.StatusBadRequest, "No server ID found")
 	}
 
 	var responses []response.ServerInfoResponse

@@ -13,12 +13,12 @@ import (
 func ServerDownRoute(c fiber.Ctx) error {
 	serverId := c.Params("id")
 	if serverId == "" {
-		return common.HTTPError(http.StatusBadRequest, "No server ID found")
+		return common.HTTPError(c, http.StatusBadRequest, "No server ID found")
 	}
 
 	i := service.Server().LookupById(serverId)
 	if i == nil {
-		return common.HTTPError(http.StatusNoContent, fmt.Sprintf("Server %s not found", serverId))
+		return common.HTTPError(c, http.StatusNoContent, fmt.Sprintf("Server %s not found", serverId))
 	}
 
 	go func() {
@@ -29,7 +29,7 @@ func ServerDownRoute(c fiber.Ctx) error {
 
 		err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
 		if err != nil {
-			common.Log.Errorf("Failed to publish packet: %v", err)
+			common.Log.Fatalf("Failed to publish packet: %v", err)
 		}
 	}()
 

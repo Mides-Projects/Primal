@@ -17,26 +17,26 @@ import (
 func ServerCreateRoute(c fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
-		return common.HTTPError(http.StatusBadRequest, "No server ID found")
+		return common.HTTPError(c, http.StatusBadRequest, "No server ID found")
 	}
 
 	serverInfo := service.Server().LookupById(id)
 	if serverInfo != nil {
-		return common.HTTPError(http.StatusConflict, fmt.Sprintf("Server %s already exists", id))
+		return common.HTTPError(c, http.StatusConflict, fmt.Sprintf("Server %s already exists", id))
 	}
 
 	port := c.Params("port")
 	if port == "" {
-		return common.HTTPError(http.StatusBadRequest, "No port found")
+		return common.HTTPError(c, http.StatusBadRequest, "No port found")
 	}
 
 	portNum, err := strconv.ParseInt(port, 10, 64)
 	if err != nil {
-		return common.HTTPError(http.StatusBadRequest, "Invalid port number")
+		return common.HTTPError(c, http.StatusBadRequest, "Invalid port number")
 	}
 
 	if service.Server().LookupByPort(portNum) != nil {
-		return common.HTTPError(http.StatusConflict, fmt.Sprintf("Port %d already in use", portNum))
+		return common.HTTPError(c, http.StatusConflict, fmt.Sprintf("Port %d already in use", portNum))
 	}
 
 	serverInfo = model.NewServerInfo(id, portNum)
@@ -50,7 +50,7 @@ func ServerCreateRoute(c fiber.Ctx) error {
 	// but small issue is I can't get the error from the goroutine
 	go func() {
 		if err = service.SaveModel(serverInfo.Id(), serverInfo.Marshal()); err != nil {
-			common.Log.Errorf("Failed to save server %s: %v", serverInfo.Id(), err)
+			common.Log.Fatalf("Failed to save server %s: %v", serverInfo.Id(), err)
 		}
 
 		payload, err := common.WrapPayload("API_SERVER_CREATE", pubsub.NewServerCreatePacket(id, portNum))
