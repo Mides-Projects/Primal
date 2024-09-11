@@ -6,9 +6,9 @@ import (
 	"github.com/holypvp/primal/common"
 	common_middleware "github.com/holypvp/primal/common/middleware"
 	grantsx "github.com/holypvp/primal/grantsx/routes"
-	"github.com/holypvp/primal/grantsx/service"
 	"github.com/holypvp/primal/server"
 	server_routes "github.com/holypvp/primal/server/routes"
+	"github.com/holypvp/primal/service"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -80,6 +80,9 @@ func loadGrantsX(e *echo.Echo, db *mongo.Database) error {
 	g := e.Group("/v2/groups")
 	g.POST("/:name/create/", grantsx.GroupCreateRoute)
 	g.GET("/", grantsx.GroupsRetrieveRoute)
+
+	gg := e.Group("/v2/grants")
+	gg.GET("/:value/lookup/:type", grantsx.GrantsLookupRoute)
 
 	return nil
 }

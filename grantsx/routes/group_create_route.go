@@ -3,7 +3,7 @@ package routes
 import (
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/grantsx/model"
-	"github.com/holypvp/primal/grantsx/service"
+	"github.com/holypvp/primal/service"
 	"github.com/labstack/echo/v4"
 	"net/http"
 )
