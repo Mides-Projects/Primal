@@ -19,13 +19,16 @@ func NewPayload(pid string, from int64, payload interface{}) Payload {
 	}
 }
 
-func HTTPError(code int, message string) error {
-	result, err := json.Marshal(map[string]interface{}{"code": code, "message": message})
-	if err != nil {
-		return echo.NewHTTPError(code, `{"code":500,"message":"Internal Server Error"}`)
-	}
+type HTTPErrorPayload struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
 
-	return echo.NewHTTPError(code, string(result))
+func HTTPError(code int, message string) error {
+	return echo.NewHTTPError(code, HTTPErrorPayload{
+		Code:    code,
+		Message: message,
+	})
 }
 
 func WrapPayload(pid string, payload interface{}) ([]byte, error) {

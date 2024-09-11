@@ -28,12 +28,14 @@ func (s *AccountService) FetchAccountId(name string) string {
 	s.accountsIdMu.RLock()
 	defer s.accountsIdMu.RUnlock()
 
-	if id, ok := s.accountsId[name]; ok {
+	if id, ok := s.accountsId[strings.ToLower(name)]; ok {
 		return id
 	}
 
-	res, err := common.RedisClient.Get(context.Background(), "primal%sources:"+strings.ToLower(name)).Result()
-	if err != nil {
+	res := common.RedisClient.Get(context.Background(), "primal%sources:"+strings.ToLower(name)).String()
+	if res == "" {
+		common.Log.Errorf("Failed to fetch account ID: %v", name)
+
 		return ""
 	}
 
