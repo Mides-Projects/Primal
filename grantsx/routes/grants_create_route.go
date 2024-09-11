@@ -26,7 +26,7 @@ func GrantsCreateRoute(c fiber.Ctx) error {
 
 	gaAdder := service.Grants().Lookup(g.AddedBy())
 	if gaAdder == nil {
-		return common.HTTPError(c, http.StatusNotFound, "Grants for source adder not found (Not cached)")
+		return common.HTTPError(c, http.StatusNotFound, "Grants for account adder not found (Not cached)")
 	}
 
 	if gaAdder.Account().Id() != g.AddedBy() {

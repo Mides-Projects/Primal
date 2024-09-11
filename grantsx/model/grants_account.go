@@ -1,12 +1,12 @@
 package model
 
 import (
-	"github.com/holypvp/primal/source/model"
+	"github.com/holypvp/primal/account"
 	"sync"
 )
 
 type GrantsAccount struct {
-	account *model.Account // Account of the account
+	account *account.Account // Account of the account
 
 	activeMu     sync.RWMutex // Mutex for active grants
 	activeGrants []*Grant     // Active grants of the account
@@ -15,7 +15,7 @@ type GrantsAccount struct {
 	expiredGrants []*Grant     // Expired grants of the account
 }
 
-func EmptyGrantsAccount(account *model.Account) *GrantsAccount {
+func EmptyGrantsAccount(account *account.Account) *GrantsAccount {
 	return &GrantsAccount{
 		account:       account,
 		activeGrants:  make([]*Grant, 0),
@@ -24,7 +24,7 @@ func EmptyGrantsAccount(account *model.Account) *GrantsAccount {
 }
 
 // Account returns the account of the account.
-func (ga *GrantsAccount) Account() *model.Account {
+func (ga *GrantsAccount) Account() *account.Account {
 	return ga.account
 }
 

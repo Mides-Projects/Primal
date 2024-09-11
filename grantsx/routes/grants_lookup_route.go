@@ -2,9 +2,9 @@ package routes
 
 import (
 	"github.com/gofiber/fiber/v3"
+	"github.com/holypvp/primal/account"
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/service"
-	"github.com/holypvp/primal/source/model"
 	"net/http"
 )
 
@@ -20,7 +20,7 @@ func GrantsLookupRoute(c fiber.Ctx) error {
 	}
 
 	if src != "name" && src != "id" {
-		return common.HTTPError(c, http.StatusBadRequest, "No valid source found")
+		return common.HTTPError(c, http.StatusBadRequest, "No valid account found")
 	}
 
 	state := c.Query("state")
@@ -37,7 +37,7 @@ func GrantsLookupRoute(c fiber.Ctx) error {
 		return common.HTTPError(c, http.StatusBadRequest, "Missing 'value' parameter")
 	}
 
-	var acc *model.Account
+	var acc *account.Account
 	var err error
 
 	if src == "name" {
