@@ -1,13 +1,13 @@
 package group
 
 import (
+	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/server/response"
 	"github.com/holypvp/primal/service"
-	"github.com/labstack/echo/v4"
 	"net/http"
 )
 
-func GroupLookupRoute(c echo.Context) error {
+func GroupLookupRoute(c fiber.Ctx) error {
 	// serverId, ok := mux.Vars(r)["id"]
 	// if !ok {
 	// 	http.Error(w, "No ID found", http.StatusBadRequest)
@@ -37,5 +37,5 @@ func GroupLookupRoute(c echo.Context) error {
 		groupsResponse = []response.ServerGroupResponse{}
 	}
 
-	return c.JSON(http.StatusOK, groupsResponse)
+	return c.Status(http.StatusOK).JSON(groupsResponse)
 }

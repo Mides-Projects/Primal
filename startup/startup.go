@@ -5,12 +5,14 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/keyauth"
+	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/holypvp/primal/common"
 	grantRoutes "github.com/holypvp/primal/grantsx/routes"
 	srvRoutes "github.com/holypvp/primal/server/routes"
 	"github.com/holypvp/primal/service"
 	"go.mongodb.org/mongo-driver/mongo"
+	"log"
 )
 
 // Hook is the entry point for the Primal API
@@ -34,6 +36,7 @@ func Hook(db *mongo.Database) error {
 	})
 
 	app.Use(recover.New())
+	app.Use(logger.New())
 	app.Use(keyauth.New(keyauth.Config{
 		KeyLookup: "header:x-api-key",
 		SuccessHandler: func(c fiber.Ctx) error {
@@ -46,7 +49,7 @@ func Hook(db *mongo.Database) error {
 				return c.Status(fiber.StatusUnauthorized).SendString("invalid or expired API key")
 			}
 		},
-		Validator: func(c fiber.Ctx, input string) (bool, error) {
+		Validator: func(_ fiber.Ctx, input string) (bool, error) {
 			if common.APIKey == input {
 				return true, nil
 			} else if input == "" {
@@ -57,8 +60,21 @@ func Hook(db *mongo.Database) error {
 		},
 	}))
 
+	log.Print("Primal API is now running")
+
 	grantRoutes.Hook(app)
 	srvRoutes.Hook(app)
 
-	return app.Listen(":3000")
+	defer func(app *fiber.App) {
+		err := app.Shutdown()
+		if err != nil {
+			log.Fatalf("Failed to shutdown Primal API: %v", err)
+		} else {
+			log.Print("Primal API has been shutdown")
+		}
+	}(app)
+
+	return app.Listen(":3000", fiber.ListenConfig{
+		EnablePrefork: true,
+	})
 }

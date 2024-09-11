@@ -31,5 +31,6 @@ func main() {
 
 	db := common.MongoClient.Database("api")
 
-	log.Fatal(startup.Hook(db))
+	log.Print("Running!")
+	log.Print(startup.Hook(db))
 }
