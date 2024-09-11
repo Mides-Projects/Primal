@@ -5,6 +5,8 @@ import (
 	"errors"
 	"github.com/holypvp/primal/common"
 	common_middleware "github.com/holypvp/primal/common/middleware"
+	grantsx "github.com/holypvp/primal/grantsx/routes"
+	"github.com/holypvp/primal/grantsx/service"
 	"github.com/holypvp/primal/server"
 	server_routes "github.com/holypvp/primal/server/routes"
 	"github.com/labstack/echo/v4"
@@ -18,17 +20,21 @@ import (
 
 func LoadAll(now time.Time, port string) {
 	e := echo.New()
+	common.Log = e.Logger
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(common_middleware.HandleBasicAuth)
 
-	loadServerRoutes(e.Group("/v2/servers"), common.MongoClient.Database("api"))
+	db := common.MongoClient.Database("api")
+	if err := loadGrantsX(e, db); err != nil {
+		common.Log.Panicf("Failed to load grantsx: %v", err)
+	}
+
+	loadServerRoutes(e.Group("/v2/servers"), db)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
-
-	common.Log = e.Logger
 
 	go func() {
 		e.Logger.Printf("App take %s to start\n", time.Since(now))
@@ -64,6 +70,18 @@ func loadServerRoutes(g *echo.Group, db *mongo.Database) {
 	g.RouteNotFound("/*", func(c echo.Context) error {
 		return echo.NewHTTPError(echo.ErrLocked.Code, "This route is not available")
 	})
+}
+
+func loadGrantsX(e *echo.Echo, db *mongo.Database) error {
+	if err := service.Groups().Hook(db); err != nil {
+		return err
+	}
+
+	g := e.Group("/v2/groups")
+	g.POST("/:name/create/", grantsx.GroupCreateRoute)
+	g.GET("/", grantsx.GroupsRetrieveRoute)
+
+	return nil
 }
 
 func Shutdown() {
