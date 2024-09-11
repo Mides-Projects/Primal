@@ -80,7 +80,7 @@ func loadGrantsX(e *echo.Echo, db *mongo.Database) error {
 	g := e.Group("/v2/groups")
 	g.POST("/:name/create/", grantsx.GroupCreateRoute)
 	g.GET("/", grantsx.GroupsRetrieveRoute)
-	g.RouteNotFound("/*", func(c echo.Context) error {
+	g.RouteNotFound("/*", func(_ echo.Context) error {
 		return common.HTTPError(echo.ErrLocked.Code, "This route is not available")
 	})
 
@@ -88,7 +88,7 @@ func loadGrantsX(e *echo.Echo, db *mongo.Database) error {
 	gg.GET("/:value/lookup/:type", grantsx.GrantsLookupRoute)
 	gg.GET("/:value/lookup", grantsx.GrantsLookupRoute)
 	gg.POST("/:name/create", grantsx.GrantsCreateRoute)
-	gg.RouteNotFound("/*", func(c echo.Context) error {
+	gg.RouteNotFound("/*", func(_ echo.Context) error {
 		return common.HTTPError(echo.ErrLocked.Code, "This route is not available")
 	})
 
