@@ -2,6 +2,7 @@ package account
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 )
 
@@ -120,4 +121,16 @@ func (a *Account) UnmarshalString(result string) error {
 	a.online = body[4] == "true"
 
 	return nil
+}
+
+func (a *Account) MarshalString() string {
+	return a.id + ":" + a.name + ":" + a.lastName + ":" + strconv.FormatBool(a.operator) + ":" + strconv.FormatBool(a.online)
+}
+
+// Empty returns an empty account.
+func Empty(id, name string) *Account {
+	return &Account{
+		id:   id,
+		name: name,
+	}
 }

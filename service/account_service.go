@@ -6,11 +6,17 @@ import (
 	"github.com/holypvp/primal/account"
 	"github.com/holypvp/primal/common"
 	"github.com/redis/go-redis/v9"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"strings"
 	"sync"
+	"time"
 )
 
 type AccountService struct {
+	col *mongo.Collection
+
 	accountsMu sync.RWMutex
 	accounts   map[string]*account.Account
 
@@ -99,6 +105,16 @@ func (s *AccountService) UnsafeLookupByName(name string) (*account.Account, erro
 	return acc, nil
 }
 
+// UpdateName updates the name of an account.
+func (s *AccountService) UpdateName(oldName, newName, id string) {
+	s.accountsIdMu.Lock()
+
+	delete(s.accountsId, strings.ToLower(oldName))
+	s.accountsId[strings.ToLower(newName)] = id
+
+	s.accountsIdMu.Unlock()
+}
+
 // Cache caches an account.
 func (s *AccountService) Cache(a *account.Account) {
 	s.accountsMu.Lock()
@@ -108,6 +124,56 @@ func (s *AccountService) Cache(a *account.Account) {
 	s.accountsIdMu.Lock()
 	s.accountsId[strings.ToLower(a.Name())] = a.Id()
 	s.accountsIdMu.Unlock()
+}
+
+// RedisCache caches an account into the Redis database.
+func (s *AccountService) RedisCache(acc *account.Account) error {
+	if common.RedisClient == nil {
+		return errors.New("redis client not found")
+	}
+
+	pip := common.RedisClient.Pipeline()
+	if pip == nil {
+		return errors.New("redis pipeline not found")
+	}
+
+	pip.Set(context.Background(), "primal%ids:"+acc.Id(), acc.MarshalString(), 72*time.Hour)
+	pip.Set(context.Background(), "primal%names:"+strings.ToLower(acc.Name()), acc.MarshalString(), 72*time.Hour)
+
+	if _, err := pip.Exec(context.Background()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Update updates an account.
+func (s *AccountService) Update(acc *account.Account) error {
+	if s.col == nil {
+		return errors.New("service not hooked to the database")
+	}
+
+	res, err := collectionServers.UpdateOne(
+		context.TODO(),
+		bson.D{{"_id", acc.Id()}},
+		bson.D{{"$set", acc.Marshal()}},
+		options.Update().SetUpsert(true),
+	)
+	if err != nil {
+		return err
+	}
+
+	if res.UpsertedCount > 0 {
+		common.Log.Printf("Account %s was inserted", acc.Id())
+	} else {
+		common.Log.Printf("Account %s was updated", acc.Id())
+	}
+
+	if err := s.RedisCache(acc); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Account returns the account service.
