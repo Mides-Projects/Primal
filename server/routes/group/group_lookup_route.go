@@ -15,7 +15,7 @@ func GroupLookupRoute(c fiber.Ctx) error {
 	// 	return
 	// }
 	//
-	// serverInfo := server.Server().LookupById(serverId)
+	// serverInfo := server.Server().UnsafeLookupById(serverId)
 	// if serverInfo == nil {
 	// 	http.Error(w, "Server not found", http.StatusNotFound)
 	//

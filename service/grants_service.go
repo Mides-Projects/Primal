@@ -38,7 +38,7 @@ func (s *GrantsService) Lookup(id string) (*model.GrantsAccount, error) {
 		return nil, err
 	}
 
-	acc, err := accountService.Fetch(id)
+	acc, err := accountService.UnsafeLookupById(id)
 	if err != nil {
 		return nil, err
 	}

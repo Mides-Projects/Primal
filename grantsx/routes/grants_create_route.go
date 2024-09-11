@@ -14,8 +14,8 @@ func GrantsCreateRoute(c fiber.Ctx) error {
 		return common.HTTPError(c, http.StatusBadRequest, "No name found for the player")
 	}
 
-	id := service.Account().FetchAccountId(name)
-	if id == "" {
+	acc := service.Account().LookupByName(name)
+	if acc == nil {
 		return common.HTTPError(c, http.StatusNotFound, "Player not found")
 	}
 
@@ -29,7 +29,7 @@ func GrantsCreateRoute(c fiber.Ctx) error {
 		return common.HTTPError(c, http.StatusBadRequest, "Failed to unmarshal grant: "+err.Error())
 	}
 
-	ga, err := service.Grants().Lookup(id)
+	ga, err := service.Grants().Lookup(acc.Id())
 	if err != nil {
 		return common.HTTPError(c, http.StatusInternalServerError, "Failed to lookup grant: "+err.Error())
 	}
@@ -38,7 +38,7 @@ func GrantsCreateRoute(c fiber.Ctx) error {
 		return common.HTTPError(c, http.StatusNotFound, "Player not found")
 	}
 
-	if ga.Account().Id() != id {
+	if ga.Account().Id() != acc.Id() {
 		return common.HTTPError(c, http.StatusConflict, "Player ID mismatch")
 	}
 
@@ -62,7 +62,7 @@ func GrantsCreateRoute(c fiber.Ctx) error {
 	}
 
 	go func() {
-		if err := service.Grants().Save(id, g); err != nil {
+		if err := service.Grants().Save(acc.Id(), g); err != nil {
 			common.Log.Fatalf("Failed to save grant: %v", err)
 		}
 	}()

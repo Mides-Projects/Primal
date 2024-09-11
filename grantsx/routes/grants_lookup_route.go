@@ -4,6 +4,7 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/service"
+	"github.com/holypvp/primal/source/model"
 	"net/http"
 )
 
@@ -32,15 +33,26 @@ func GrantsLookupRoute(c fiber.Ctx) error {
 	}
 
 	v := c.Params("value")
-	if src == "name" {
-		v = service.Account().FetchAccountId(v)
-	}
-
 	if v == "" {
-		return common.HTTPError(c, http.StatusBadRequest, "Missing 'id' into our database")
+		return common.HTTPError(c, http.StatusBadRequest, "Missing 'value' parameter")
 	}
 
-	ga, err := service.Grants().Lookup(v)
+	var acc *model.Account
+	var err error
+
+	if src == "name" {
+		acc, err = service.Account().UnsafeLookupByName(v)
+	} else {
+		acc, err = service.Account().UnsafeLookupById(v)
+	}
+
+	if err != nil {
+		return common.HTTPError(c, http.StatusInternalServerError, "Failed to lookup account: "+err.Error())
+	} else if acc == nil {
+		return common.HTTPError(c, http.StatusNotFound, "Player not found")
+	}
+
+	ga, err := service.Grants().Lookup(acc.Id())
 	if err != nil {
 		return common.HTTPError(c, http.StatusInternalServerError, "Failed to lookup grant: "+err.Error())
 	} else if ga == nil {
