@@ -33,16 +33,7 @@ func AccountJoinRoute(c fiber.Ctx) error {
 		})
 	}
 
-	var (
-		acc *account.Account
-		err error
-	)
-
-	acc = service.Account().LookupById(id)
-	if acc == nil {
-		acc, err = service.Account().UnsafeLookupById(id)
-	}
-
+	acc, err := service.Account().UnsafeLookupById(id)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Failed to lookup account: " + err.Error(),
@@ -88,4 +79,6 @@ func AccountJoinRoute(c fiber.Ctx) error {
 func Hook(app *fiber.App) {
 	g := app.Group("/v1/account")
 	g.Get("/:id/join/:name", AccountJoinRoute)
+	g.Patch("/:id/update", AccountUpdateRoute)
+	g.Delete("/:id/quit", AccountQuitRoute)
 }

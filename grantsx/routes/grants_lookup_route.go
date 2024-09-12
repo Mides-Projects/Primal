@@ -11,45 +11,82 @@ import (
 func GrantsLookupRoute(c fiber.Ctx) error {
 	t := c.Params("type")
 	if t != "" && t != "active" && t != "expired" {
-		return common.HTTPError(c, http.StatusBadRequest, "Invalid type")
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid type",
+			"code":    http.StatusBadRequest,
+		})
 	}
 
 	src := c.Query("src")
 	if src == "" {
-		return common.HTTPError(c, http.StatusBadRequest, "Missing 'src' query parameter")
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "Missing 'src' query parameter",
+			"code":    http.StatusBadRequest,
+		})
 	}
 
 	if src != "name" && src != "id" {
-		return common.HTTPError(c, http.StatusBadRequest, "No valid account found")
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid src",
+			"code":    http.StatusBadRequest,
+		})
 	}
 
 	state := c.Query("state")
 	if state == "" {
-		return common.HTTPError(c, http.StatusBadRequest, "Missing 'state' query parameter")
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "Missing 'state' query parameter",
+			"code":    http.StatusBadRequest,
+		})
 	}
 
 	if state != "online" && state != "offline" {
-		return common.HTTPError(c, http.StatusBadRequest, "Invalid state")
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "Invalid state",
+			"code":    http.StatusBadRequest,
+		})
 	}
 
 	v := c.Params("value")
 	if v == "" {
-		return common.HTTPError(c, http.StatusBadRequest, "Missing 'value' parameter")
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "Missing 'value' parameter",
+			"code":    http.StatusBadRequest,
+		})
 	}
 
 	var acc *account.Account
 	var err error
 
-	if src == "name" {
-		acc, err = service.Account().UnsafeLookupByName(v)
+	if state == "online" {
+		if src == "name" {
+			acc = service.Account().LookupByName(v)
+		} else {
+			acc = service.Account().LookupById(v)
+		}
 	} else {
-		acc, err = service.Account().UnsafeLookupById(v)
+		if src == "name" {
+			acc, err = service.Account().UnsafeLookupByName(v)
+		} else {
+			acc, err = service.Account().UnsafeLookupById(v)
+		}
 	}
 
 	if err != nil {
-		return common.HTTPError(c, http.StatusInternalServerError, "Failed to lookup account: "+err.Error())
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to lookup account: " + err.Error(),
+			"code":    http.StatusInternalServerError,
+		})
+	} else if acc == nil && state == "online" {
+		return c.Status(http.StatusServiceUnavailable).JSON(fiber.Map{
+			"message": "Account is not online, but the state is set to online",
+			"code":    http.StatusServiceUnavailable,
+		})
 	} else if acc == nil {
-		return common.HTTPError(c, http.StatusNotFound, "Player not found")
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{
+			"message": "Account not found",
+			"code":    http.StatusNotFound,
+		})
 	}
 
 	ga, err := service.Grants().UnsafeLookup(acc.Id())

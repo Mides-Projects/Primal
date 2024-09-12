@@ -23,6 +23,14 @@ func AccountQuitRoute(c fiber.Ctx) error {
 		})
 	}
 
+	var body map[string]interface{}
+	if err := c.Bind().Body(&body); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "Failed to bind request body: " + err.Error(),
+			"code":    http.StatusBadRequest,
+		})
+	}
+
 	acc.SetOnline(false)
 
 	// TODO: Broadcast a redis message to all servers that the player has logged out
