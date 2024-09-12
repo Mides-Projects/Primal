@@ -1,30 +1,22 @@
 package routes
 
 import (
-	"encoding/json"
-	"github.com/gorilla/mux"
-	"github.com/holypvp/primal/common/middleware"
-	"github.com/holypvp/primal/server"
+	"github.com/gofiber/fiber/v3"
+	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/server/response"
+	"github.com/holypvp/primal/service"
 	"log"
 	"net/http"
 )
 
-func LookupServers(w http.ResponseWriter, r *http.Request) {
-	if !middleware.HandleAuth(w, r) {
-		return
-	}
-
-	serverId, ok := mux.Vars(r)["id"]
-	if !ok {
-		http.Error(w, "No ID found", http.StatusBadRequest)
-		log.Printf("[Server-Lookup] No ID found")
-
-		return
+func LookupServers(c fiber.Ctx) error {
+	serverId := c.Params("id")
+	if serverId == "" {
+		return common.HTTPError(c, http.StatusBadRequest, "No server ID found")
 	}
 
 	var responses []response.ServerInfoResponse
-	for _, serverInfo := range server.Service().Servers() {
+	for _, serverInfo := range service.Server().Servers() {
 		responses = append(responses, response.NewServerInfoResponse(serverInfo))
 	}
 
@@ -32,13 +24,7 @@ func LookupServers(w http.ResponseWriter, r *http.Request) {
 		responses = []response.ServerInfoResponse{}
 	}
 
-	err := json.NewEncoder(w).Encode(responses)
-	if err != nil {
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		log.Printf("[Server-Lookup] Failed to encode response: %v", err)
-
-		return
-	}
-
 	log.Print("Server " + serverId + " has requested all servers")
+
+	return c.Status(http.StatusOK).JSON(responses)
 }

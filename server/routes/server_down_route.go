@@ -2,53 +2,36 @@ package routes
 
 import (
 	"context"
-	"github.com/gorilla/mux"
+	"fmt"
+	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
-	"github.com/holypvp/primal/common/middleware"
-	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/pubsub"
-	"log"
+	"github.com/holypvp/primal/service"
 	"net/http"
 )
 
-func ServerDownRoute(w http.ResponseWriter, r *http.Request) {
-	if !middleware.HandleAuth(w, r) {
-		return
+func ServerDownRoute(c fiber.Ctx) error {
+	serverId := c.Params("id")
+	if serverId == "" {
+		return common.HTTPError(c, http.StatusBadRequest, "No server ID found")
 	}
 
-	id, ok := mux.Vars(r)["id"]
-	if !ok {
-		http.Error(w, "No ID found", http.StatusBadRequest)
-		log.Print("[Server-Down] No ID found")
-
-		return
+	i := service.Server().LookupById(serverId)
+	if i == nil {
+		return common.HTTPError(c, http.StatusNoContent, fmt.Sprintf("Server %s not found", serverId))
 	}
 
-	serverInfo := server.Service().LookupById(id)
-	if serverInfo == nil {
-		http.Error(w, "Server not found", http.StatusNotFound)
-		log.Print("[Server-Down] Server not found")
+	go func() {
+		payload, err := common.WrapPayload("API_SERVER_DOWN", pubsub.NewServerStatusPacket(i.Id()))
+		if err != nil {
+			common.Log.Fatal("Failed to marshal packet: ", err)
+		}
 
-		return
-	}
+		err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
+		if err != nil {
+			common.Log.Fatalf("Failed to publish packet: %v", err)
+		}
+	}()
 
-	payload, err := common.WrapPayload("API_SERVER_DOWN", pubsub.NewServerStatusPacket(serverInfo.Id()))
-	if err != nil {
-		http.Error(w, "Failed to marshal packet", http.StatusInternalServerError)
-		log.Printf("[Server-Down] Failed to marshal packet: %v", err)
-
-		return
-	}
-
-	err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
-	if err != nil {
-		http.Error(w, "Failed to publish packet", http.StatusInternalServerError)
-		log.Printf("[Server-Down] Failed to publish packet: %v", err)
-
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-
-	log.Printf("[Server-Down] Server %s is now down", serverInfo.Id())
+	return c.Status(http.StatusOK).SendString(fmt.Sprintf("Server %s is now down", i.Id()))
 }

@@ -1,19 +1,13 @@
 package group
 
 import (
-	"encoding/json"
-	"github.com/holypvp/primal/common/middleware"
-	"github.com/holypvp/primal/server"
+	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/server/response"
-	"log"
+	"github.com/holypvp/primal/service"
 	"net/http"
 )
 
-func GroupLookupRoute(w http.ResponseWriter, r *http.Request) {
-	if !middleware.HandleAuth(w, r) {
-		return
-	}
-
+func GroupLookupRoute(c fiber.Ctx) error {
 	// serverId, ok := mux.Vars(r)["id"]
 	// if !ok {
 	// 	http.Error(w, "No ID found", http.StatusBadRequest)
@@ -21,7 +15,7 @@ func GroupLookupRoute(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 	//
-	// serverInfo := server.Service().LookupById(serverId)
+	// serverInfo := server.Server().UnsafeLookupById(serverId)
 	// if serverInfo == nil {
 	// 	http.Error(w, "Server not found", http.StatusNotFound)
 	//
@@ -29,7 +23,7 @@ func GroupLookupRoute(w http.ResponseWriter, r *http.Request) {
 	// }
 
 	var groupsResponse []response.ServerGroupResponse
-	for _, group := range server.Service().Groups() {
+	for _, group := range service.Server().Groups() {
 		groupsResponse = append(groupsResponse, response.ServerGroupResponse{
 			Id:                    group.Id(),
 			Metadata:              group.Metadata(),
@@ -43,12 +37,5 @@ func GroupLookupRoute(w http.ResponseWriter, r *http.Request) {
 		groupsResponse = []response.ServerGroupResponse{}
 	}
 
-	err := json.NewEncoder(w).Encode(groupsResponse)
-	if err != nil {
-		http.Error(w, "Failed to marshal groups", http.StatusInternalServerError)
-
-		return
-	}
-
-	log.Print("Server group lookup route hit")
+	return c.Status(http.StatusOK).JSON(groupsResponse)
 }

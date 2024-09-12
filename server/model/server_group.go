@@ -1,4 +1,6 @@
-package server
+package model
+
+import "errors"
 
 type ServerGroup struct {
 	id                    string
@@ -65,4 +67,49 @@ func (g *ServerGroup) RemoveAnnouncement(announcement string) {
 			g.announcements = append(g.announcements[:i], g.announcements[i+1:]...)
 		}
 	}
+}
+
+func (g *ServerGroup) Marshal() map[string]interface{} {
+	return map[string]interface{}{
+		"id":                     g.id,
+		"metadata":               g.metadata,
+		"announcements":          g.announcements,
+		"announcements_interval": g.announcementsInterval,
+		"fallback_server_id":     g.fallbackServerId,
+	}
+}
+
+func (g *ServerGroup) Unmarshal(data map[string]interface{}) error {
+	id, ok := data["id"].(string)
+	if !ok {
+		return errors.New("id is not a string")
+	}
+
+	g.id = id
+
+	metadata, ok := data["metadata"].(map[string]interface{})
+	if !ok {
+		return errors.New("metadata is not a map")
+	}
+	g.metadata = metadata
+
+	announcements, ok := data["announcements"].([]string)
+	if !ok {
+		return errors.New("announcements is not a string array")
+	}
+	g.announcements = announcements
+
+	if announcementsInterval, ok := data["announcements_interval"].(int64); !ok {
+		return errors.New("announcements_interval is not an int64")
+	} else {
+		g.announcementsInterval = announcementsInterval
+	}
+
+	fallbackServerId, ok := data["fallback_server_id"].(*string)
+	if !ok {
+		return errors.New("fallback_server_id is not a string")
+	}
+	g.fallbackServerId = fallbackServerId
+
+	return nil
 }

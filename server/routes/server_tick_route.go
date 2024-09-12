@@ -2,46 +2,28 @@ package routes
 
 import (
 	"context"
-	"encoding/json"
-	"github.com/gorilla/mux"
+	"errors"
+	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
-	"github.com/holypvp/primal/common/middleware"
-	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/request"
-	"log"
+	"github.com/holypvp/primal/service"
 	"net/http"
 )
 
-func ServerTickRoute(w http.ResponseWriter, r *http.Request) {
-	if !middleware.HandleAuth(w, r) {
-		return
+func ServerTickRoute(c fiber.Ctx) error {
+	id := c.Params("id")
+	if id == "" {
+		return common.HTTPError(c, http.StatusBadRequest, "No server ID found")
 	}
 
-	vars := mux.Vars(r)
-
-	id, ok := vars["id"]
-	if !ok {
-		http.Error(w, "No ID found", http.StatusBadRequest)
-		log.Printf("[Server-Tick] No ID found")
-
-		return
-	}
-
-	serverInfo := server.Service().LookupById(id)
+	serverInfo := service.Server().LookupById(id)
 	if serverInfo == nil {
-		http.Error(w, "Server not found", http.StatusNotFound)
-		log.Printf("[Server-Tick] Server not found")
-
-		return
+		return common.HTTPError(c, http.StatusNoContent, "Server not found")
 	}
 
-	body := &request.ServerTickBody{}
-	err := json.NewDecoder(r.Body).Decode(body)
-	if err != nil {
-		http.Error(w, "Failed to parse request body", http.StatusBadRequest)
-		log.Printf("[Server-Tick] Failed to parse request body: %v", err)
-
-		return
+	body := &request.ServerTickBodyRequest{}
+	if err := c.Bind().Body(body); err != nil {
+		return common.HTTPError(c, http.StatusBadRequest, errors.Join(errors.New("failed to decode body"), err).Error())
 	}
 
 	serverInfo.SetPlayersCount(body.PlayersCount)
@@ -54,23 +36,17 @@ func ServerTickRoute(w http.ResponseWriter, r *http.Request) {
 	serverInfo.SetTicksPerSecond(body.TicksPerSecond)
 	serverInfo.SetFullTicks(body.FullTicks)
 
+	// TODO: This have performance issues because it's blocking the main thread
+	// so I prefer make the wrapper and publish in a goroutine
 	payload, err := common.WrapPayload("API_SERVER_TICK", body)
 	if err != nil {
-		http.Error(w, "Failed to marshal packet", http.StatusInternalServerError)
-		log.Printf("[Server-Tick] Failed to marshal packet: %v", err)
-
-		return
+		return common.HTTPError(c, http.StatusInternalServerError, "Failed to wrap payload")
 	}
 
 	err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
 	if err != nil {
-		http.Error(w, "Failed to publish packet", http.StatusInternalServerError)
-		log.Printf("[Server-Tick] Failed to publish packet: %v", err)
-
-		return
+		return common.HTTPError(c, http.StatusInternalServerError, "Failed to publish payload")
 	}
 
-	log.Printf("Successfully updated server tick for %s\n", id)
-
-	w.WriteHeader(http.StatusOK)
+	return c.Status(http.StatusOK).SendString("Server ticked")
 }

@@ -2,88 +2,67 @@ package routes
 
 import (
 	"context"
-	"encoding/json"
-	"github.com/gorilla/mux"
+	"errors"
+	"fmt"
+	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
-	"github.com/holypvp/primal/common/middleware"
-	"github.com/holypvp/primal/server"
 	"github.com/holypvp/primal/server/pubsub"
 	"github.com/holypvp/primal/server/request"
-	"log"
+	"github.com/holypvp/primal/service"
 	"net/http"
 	"time"
 )
 
-func ServerUpRoute(w http.ResponseWriter, r *http.Request) {
-	if !middleware.HandleAuth(w, r) {
-		return
+func ServerUpRoute(c fiber.Ctx) error {
+	serverId := c.Params("id")
+	if serverId == "" {
+		return common.HTTPError(c, http.StatusBadRequest, "No server ID found")
 	}
 
-	serverId, ok := mux.Vars(r)["id"]
-	if !ok {
-		http.Error(w, "No ID found", http.StatusBadRequest)
-		log.Printf("[ServerUpRoute] No ID found")
-
-		return
+	si := service.Server().LookupById(serverId)
+	if si == nil {
+		return common.HTTPError(c, http.StatusNoContent, fmt.Sprintf("Server %s not found", serverId))
 	}
 
-	serverInfo := server.Service().LookupById(serverId)
-	if serverInfo == nil {
-		http.Error(w, "Server not found", http.StatusBadRequest)
-		log.Printf("[ServerUpRoute] Server not found")
-
-		return
+	body := &request.ServerUpBodyRequest{}
+	if err := c.Bind().Body(body); err != nil {
+		return common.HTTPError(c, http.StatusBadRequest, errors.Join(errors.New("failed to decode body"), err).Error())
 	}
 
-	body := &request.ServerUpBody{}
-	err := json.NewDecoder(r.Body).Decode(body)
-	if err != nil {
-		http.Error(w, "Failed to parse request body", http.StatusBadRequest)
-		log.Printf("[ServerUpRoute] Failed to parse request body: %v", err)
+	si.SetDirectory(body.Directory)
+	si.SetMotd(body.Motd)
 
-		return
-	}
+	si.SetBungeeCord(body.BungeeCord)
+	si.SetOnlineMode(body.OnlineMode)
 
-	serverInfo.SetDirectory(body.Directory)
-	serverInfo.SetMotd(body.Motd)
+	si.SetMaxSlots(body.MaxSlots)
+	si.SetPlugins(body.Plugins)
 
-	serverInfo.SetBungeeCord(body.BungeeCord)
-	serverInfo.SetOnlineMode(body.OnlineMode)
-
-	serverInfo.SetMaxSlots(body.MaxSlots)
-	serverInfo.SetPlugins(body.Plugins)
-
-	initialTime := serverInfo.InitialTime()
+	initialTime := si.InitialTime()
 	if initialTime == 0 {
-		http.Error(w, "Server was never down", http.StatusBadRequest)
-		log.Printf("[ServerUpRoute] Server was never down")
-
-		return
+		return common.HTTPError(c, http.StatusBadRequest, "Server has not been initialized")
 	}
 
 	now := time.Now().UnixMilli()
-	serverInfo.SetInitialTime(now)
+	si.SetInitialTime(now)
 
 	// Save the server model in a goroutine to avoid blocking the main thread
-	go server.SaveModel(serverInfo.ToModel())
+	go func() {
+		if err := service.SaveModel(si.Id(), si.Marshal()); err != nil {
+			common.Log.Fatalf("Failed to save server %s: %v", si.Id(), err)
+		}
+	}()
 
 	payload, err := common.WrapPayload("API_SERVER_UP", pubsub.NewServerStatusPacket(serverId))
 	if err != nil {
-		http.Error(w, "Failed to marshal packet", http.StatusInternalServerError)
-		log.Printf("[ServerUpRoute] Failed to marshal packet: %v", err)
-
-		return
+		return common.HTTPError(c, http.StatusInternalServerError, "Failed to wrap payload")
 	}
 
+	// TODO: Maybe we need do the publish in a goroutine too
 	err = common.RedisClient.Publish(context.Background(), common.RedisChannel, payload).Err()
 	if err != nil {
-		http.Error(w, "Failed to publish packet", http.StatusInternalServerError)
-		log.Printf("[ServerUpRoute] Failed to publish packet: %v", err)
-
-		return
+		return common.HTTPError(c, http.StatusInternalServerError, "Failed to publish payload")
 	}
 
-	w.WriteHeader(http.StatusOK)
-
-	log.Printf("[ServerUpRoute] Server %s is now back up. After %d ms", serverId, now-serverInfo.Heartbeat())
+	return c.Status(http.StatusOK).SendString(fmt.Sprintf("Server %s is now back up. After %d ms", serverId, now-si.Heartbeat()))
 }
