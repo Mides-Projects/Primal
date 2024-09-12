@@ -26,6 +26,8 @@ func Hook(db *mongo.Database) error {
 		return errors.Join(errors.New("failed to hook 'BungeeGroups'"), err)
 	} else if err := service.Grants().Hook(db); err != nil {
 		return errors.Join(errors.New("failed to hook 'GrantsX'"), err)
+	} else if err := service.Account().Hook(db); err != nil {
+		return errors.Join(errors.New("failed to hook 'AccountService'"), err)
 	}
 
 	app := fiber.New(fiber.Config{
@@ -45,9 +47,15 @@ func Hook(db *mongo.Database) error {
 		},
 		ErrorHandler: func(c fiber.Ctx, err error) error {
 			if errors.Is(err, keyauth.ErrMissingOrMalformedAPIKey) {
-				return c.Status(fiber.StatusUnauthorized).SendString("missing or malformed API key")
+				return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+					"message": "missing or malformed API key",
+					"code":    fiber.StatusUnauthorized,
+				})
 			} else {
-				return c.Status(fiber.StatusUnauthorized).SendString("invalid or expired API key")
+				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+					"message": "invalid or expired API key",
+					"code":    fiber.StatusForbidden,
+				})
 			}
 		},
 		Validator: func(_ fiber.Ctx, input string) (bool, error) {
@@ -76,7 +84,7 @@ func Hook(db *mongo.Database) error {
 		}
 	}(app)
 
-	return app.Listen(":3000", fiber.ListenConfig{
+	return app.Listen(common.Port, fiber.ListenConfig{
 		EnablePrefork: true,
 	})
 }

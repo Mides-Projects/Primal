@@ -17,16 +17,24 @@ func AccountJoinRoute(c fiber.Ctx) error {
 		})
 	}
 
-	serverName := c.Params("server")
-	if serverName == "" {
+	var body map[string]interface{}
+	if err := c.Bind().Body(&body); err != nil {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "Failed to parse body: " + err.Error(),
+			"code":    http.StatusBadRequest,
+		})
+	}
+
+	serverName, ok := body["server"].(string)
+	if !ok || serverName == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Missing 'server' parameter",
 			"code":    http.StatusBadRequest,
 		})
 	}
 
-	name := c.Query("name")
-	if name == "" {
+	name, ok := body["name"].(string)
+	if !ok || name == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Missing 'name' query parameter",
 			"code":    http.StatusBadRequest,
@@ -78,7 +86,7 @@ func AccountJoinRoute(c fiber.Ctx) error {
 // Hook registers the route to the app
 func Hook(app *fiber.App) {
 	g := app.Group("/v1/account")
-	g.Get("/:id/join/:name", AccountJoinRoute)
+	g.Put("/:id/join", AccountJoinRoute)
 	g.Patch("/:id/update", AccountUpdateRoute)
 	g.Delete("/:id/quit", AccountQuitRoute)
 }

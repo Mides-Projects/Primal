@@ -13,6 +13,7 @@ var (
 	MongoClient  *mongo.Client = nil
 	RedisChannel string
 	APIKey       string
+	Port         string
 	Log          *log.Logger
 )
 

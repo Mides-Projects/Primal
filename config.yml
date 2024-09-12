@@ -1,7 +1,8 @@
-redis-uri: "redis://play.infinitymcpe.com:6379"
-redis-channel: "Api"
+redis-uri: "redis://127.0.0.1:6379"
+redis-channel: "PRIMAL"
+mongodb-name: "PrimalDev"
 
-mongodb-uri: "mongodb://mongoadmin:infinityadmin20230911@play.infinitymcpe.com:27017/admin"
-port: 3001
+mongodb-uri: "mongodb://23.161.168.49:27017/"
+port: ":3001"
 
 key: "1b494414-19b1-497e-9259-b5be94092f22"

@@ -25,11 +25,12 @@ func main() {
 
 	common.RedisChannel = conf.RedisChannel
 	common.APIKey = conf.Key
+	common.Port = conf.Port
 
 	common.LoadMongo(conf.MongoUri)
 	common.LoadRedis(conf.RedisUri)
 
-	db := common.MongoClient.Database("api")
+	db := common.MongoClient.Database(conf.MongoDBName)
 
 	log.Print("Running!")
 	log.Print(startup.Hook(db))

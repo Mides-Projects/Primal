@@ -58,7 +58,7 @@ func (s *AccountService) UnsafeLookupById(id string) (*account.Account, error) {
 	// If the account was fetch from database, it will be cached into redis to prevent further database calls in the next 72 hours.
 	val, err := common.RedisClient.Get(context.Background(), "primal%ids:"+id).Result()
 	if errors.Is(err, redis.Nil) {
-		return nil, errors.New("key does not exists")
+		return nil, nil
 	} else if err != nil {
 		return nil, err
 	} else if val == "" {
@@ -153,7 +153,7 @@ func (s *AccountService) Update(acc *account.Account) error {
 		return errors.New("service not hooked to the database")
 	}
 
-	res, err := collectionServers.UpdateOne(
+	res, err := s.col.UpdateOne(
 		context.TODO(),
 		bson.D{{"_id", acc.Id()}},
 		bson.D{{"$set", acc.Marshal()}},
@@ -172,6 +172,17 @@ func (s *AccountService) Update(acc *account.Account) error {
 	if err := s.RedisCache(acc); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// Hook hooks the account service to the database.
+func (s *AccountService) Hook(db *mongo.Database) error {
+	if s.col != nil {
+		return errors.New("service already hooked to the database")
+	}
+
+	s.col = db.Collection("accounts")
 
 	return nil
 }
