@@ -84,7 +84,5 @@ func Hook(db *mongo.Database) error {
 		}
 	}(app)
 
-	return app.Listen(common.Port, fiber.ListenConfig{
-		EnablePrefork: true,
-	})
+	return app.Listen(common.Port)
 }

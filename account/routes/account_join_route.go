@@ -6,6 +6,7 @@ import (
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/service"
 	"net/http"
+	"time"
 )
 
 func AccountJoinRoute(c fiber.Ctx) error {
@@ -49,19 +50,21 @@ func AccountJoinRoute(c fiber.Ctx) error {
 		})
 	}
 
+	empty := acc == nil
 	if acc == nil {
 		acc = account.Empty(id, "")
 	}
 
 	if acc.Name() != name {
-		if acc.Name() != "" {
-			service.Account().UpdateName(acc.Name(), name, acc.Id())
+		oldName := acc.Name()
+		acc.SetLastName(oldName)
+		acc.SetName(name)
+
+		if !empty {
+			service.Account().UpdateName(oldName, name, acc.Id())
 		} else {
 			service.Account().Cache(acc)
 		}
-
-		acc.SetLastName(acc.Name())
-		acc.SetName(name)
 
 		go func() {
 			if err = service.Account().Update(acc); err != nil {
@@ -79,8 +82,10 @@ func AccountJoinRoute(c fiber.Ctx) error {
 	// Mark the account as online and set the current server
 	acc.SetCurrentServer(serverName)
 	acc.SetOnline(true)
+	acc.SetLastJoin(time.Now())
 
-	return c.Status(http.StatusOK).JSON(acc)
+	// Im idiot
+	return c.Status(http.StatusOK).JSON(acc.Marshal())
 }
 
 // Hook registers the route to the app
@@ -88,5 +93,5 @@ func Hook(app *fiber.App) {
 	g := app.Group("/v1/account")
 	g.Put("/:id/join", AccountJoinRoute)
 	g.Patch("/:id/update", AccountUpdateRoute)
-	g.Delete("/:id/quit", AccountQuitRoute)
+	g.Patch("/:id/quit", AccountQuitRoute)
 }

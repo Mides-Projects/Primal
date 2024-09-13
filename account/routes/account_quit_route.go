@@ -2,8 +2,10 @@ package routes
 
 import (
 	"github.com/gofiber/fiber/v3"
+	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/service"
 	"net/http"
+	"sync/atomic"
 )
 
 func AccountQuitRoute(c fiber.Ctx) error {
@@ -26,12 +28,63 @@ func AccountQuitRoute(c fiber.Ctx) error {
 	var body map[string]interface{}
 	if err := c.Bind().Body(&body); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"message": "Failed to bind request body: " + err.Error(),
+			"message": "Failed to parse body: " + err.Error(),
 			"code":    http.StatusBadRequest,
 		})
 	}
 
-	acc.SetOnline(false)
+	state := atomic.Bool{}
+	state.Store(true)
+	defer acc.SetOnline(state.Load())
+
+	displayName, ok := body["display_name"].(string)
+	if !ok || displayName == "" {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "Missing 'display_name' parameter",
+			"code":    http.StatusBadRequest,
+		})
+	}
+
+	highestGroup, ok := body["highest_group"].(string)
+	if !ok || highestGroup == "" {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "Missing 'highest_group' parameter",
+			"code":    http.StatusBadRequest,
+		})
+	}
+
+	timestamp, ok := body["timestamp"].(float64)
+	if !ok || timestamp == 0 {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "Missing 'timestamp' parameter",
+			"code":    http.StatusBadRequest,
+		})
+	}
+
+	canBeUpdated := false
+	if acc.DisplayName() != displayName {
+		acc.SetDisplayName(displayName)
+		canBeUpdated = true
+	}
+
+	if acc.HighestGroup() != highestGroup {
+		acc.SetHighestGroup(highestGroup)
+		canBeUpdated = true
+	}
+
+	if canBeUpdated {
+		go func() {
+			if err := service.Account().Update(acc); err != nil {
+				common.Log.Fatalf("Failed to update account: %v", err)
+			}
+		}()
+	}
+
+	if int64(timestamp) > acc.LastJoin().UnixMilli() {
+		common.Log.Print("Player was disconnected due to a timestamp mismatch")
+	} else {
+		state.Store(false) // The state change to false because the player not was disconnected
+	}
 
 	// TODO: Broadcast a redis message to all servers that the player has logged out
 	// with his display name and the server he was logged in

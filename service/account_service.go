@@ -56,23 +56,43 @@ func (s *AccountService) UnsafeLookupById(id string) (*account.Account, error) {
 	// This values are only cached for 72 hours, after that they are removed from redis
 	// but still available in our mongo database.
 	// If the account was fetch from database, it will be cached into redis to prevent further database calls in the next 72 hours.
-	val, err := common.RedisClient.Get(context.Background(), "primal%ids:"+id).Result()
-	if errors.Is(err, redis.Nil) {
-		return nil, nil
-	} else if err != nil {
+	var (
+		acc *account.Account
+		err error
+	)
+	if acc, err = s.lookupAtRedis("primal%ids:", id); err != nil {
 		return nil, err
-	} else if val == "" {
-		return nil, errors.New("empty value")
-	} else {
-		acc := &account.Account{}
-		if err = acc.UnmarshalString(val); err != nil {
-			return nil, err
-		}
-
-		s.Cache(acc)
-
-		return acc, nil
+	} else if acc == nil {
+		acc, err = s.lookupAtMongo("_id", id)
 	}
+
+	if err != nil {
+		return nil, err
+	} else if acc == nil {
+		return nil, nil
+	}
+
+	s.Cache(acc)
+
+	return acc, nil
+
+	// val, err := common.RedisClient.Get(context.Background(), "primal%ids:"+id).Result()
+	// if errors.Is(err, redis.Nil) {
+	// 	return nil, nil
+	// } else if err != nil {
+	// 	return nil, err
+	// } else if val == "" {
+	// 	return nil, errors.New("empty value")
+	// } else {
+	// 	acc := &account.Account{}
+	// 	if err = acc.UnmarshalString(val); err != nil {
+	// 		return nil, err
+	// 	}
+	//
+	// 	s.Cache(acc)
+	//
+	// 	return acc, nil
+	// }
 }
 
 // UnsafeLookupByName retrieves an account by its name. It's unsafe to use this method because
@@ -174,6 +194,33 @@ func (s *AccountService) Update(acc *account.Account) error {
 	}
 
 	return nil
+}
+
+func (s *AccountService) lookupAtRedis(k, v string) (*account.Account, error) {
+	val, err := common.RedisClient.Get(context.Background(), k+v).Result()
+	if errors.Is(err, redis.Nil) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	} else if val == "" {
+		return nil, errors.New("empty value")
+	} else {
+		acc := &account.Account{}
+		if acc.UnmarshalString(val) != nil {
+			return nil, err
+		}
+
+		return acc, nil
+	}
+}
+
+func (s *AccountService) lookupAtMongo(k, v string) (*account.Account, error) {
+	var acc account.Account
+	if err := s.col.FindOne(context.TODO(), bson.D{{k, v}}).Decode(&acc); err != nil {
+		return nil, err
+	}
+
+	return &acc, nil
 }
 
 // Hook hooks the account service to the database.

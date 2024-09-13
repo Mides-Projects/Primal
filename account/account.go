@@ -2,8 +2,10 @@ package account
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Account struct {
@@ -18,6 +20,8 @@ type Account struct {
 
 	highestGroup  string // Highest group of account
 	currentServer string // Current server of account
+
+	lastJoin time.Time
 }
 
 // Id returns the ID of the account.
@@ -95,10 +99,20 @@ func (a *Account) SetCurrentServer(server string) {
 	a.currentServer = server
 }
 
+// LastJoin returns the last join time of the account.
+func (a *Account) LastJoin() time.Time {
+	return a.lastJoin
+}
+
+// SetLastJoin sets the last join time of the account.
+func (a *Account) SetLastJoin(join time.Time) {
+	a.lastJoin = join
+}
+
 // Marshal returns the account as a map.
 func (a *Account) Marshal() map[string]interface{} {
 	return map[string]interface{}{
-		"id":        a.id,
+		"_id":       a.id,
 		"name":      a.name,
 		"last_name": a.lastName,
 		"operator":  a.operator,
@@ -107,7 +121,7 @@ func (a *Account) Marshal() map[string]interface{} {
 
 // Unmarshal unmarshals the account from a map.
 func (a *Account) Unmarshal(body map[string]interface{}) error {
-	id, ok := body["id"].(string)
+	id, ok := body["_id"].(string)
 	if !ok {
 		return errors.New("id is not a string")
 	}
@@ -153,6 +167,10 @@ func (a *Account) UnmarshalString(result string) error {
 // MarshalString marshals the account to a string.
 func (a *Account) MarshalString() string {
 	return a.id + ":" + a.name + ":" + a.lastName + ":" + strconv.FormatBool(a.operator)
+}
+
+func (a *Account) String() string {
+	return fmt.Sprintf("Account{id=%s, name=%s, last_name=%s, operator=%t, display_name=%s, highest_group=%s}", a.id, a.name, a.lastName, a.operator, a.displayName, a.highestGroup)
 }
 
 // Empty returns an empty account.
