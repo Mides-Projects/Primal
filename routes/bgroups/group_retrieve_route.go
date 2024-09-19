@@ -7,10 +7,13 @@ import (
 	"net/http"
 )
 
-func groupsRetrieveRoute(c fiber.Ctx) error {
+// retrieve retrieves all groups.
+// This route is used to retrieve all groups. It's a simple route that
+// returns all groups from the service.Groups() service.
+func retrieve(c fiber.Ctx) error {
 	values := service.Groups().All()
 
-	body := make([]map[string]interface{}, len(values))
+	body := make([]fiber.Map, len(values))
 	for _, g := range values {
 		body = append(body, g.Marshal())
 	}
@@ -22,8 +25,8 @@ func Hook(app *fiber.App) {
 	// r.RouteNotFound(func(c *fiber.Ctx) error {
 
 	g := app.Group("/v1/bgroups")
-	g.Post("/:name/create/", groupCreateRoute)
-	g.Get("/", groupsRetrieveRoute)
+	g.Post("/:name/create/", create)
+	g.Get("/", retrieve)
 	// g.RouteNotFound("/*", func(_ echo.Context) error {
 	// 	return common.HTTPError(echo.ErrLocked.Code, "This route is not available")
 	// })

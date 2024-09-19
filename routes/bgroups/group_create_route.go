@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-func groupCreateRoute(c fiber.Ctx) error {
+func create(c fiber.Ctx) error {
 	name := c.Params("name")
 	if name == "" {
 		return common.HTTPError(c, http.StatusBadRequest, "No group name found")
