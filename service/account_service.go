@@ -53,7 +53,7 @@ func (s *AccountService) UnsafeLookupById(id string) (*account.Account, error) {
 		return acc, nil
 	}
 
-	// This values are only cached for 72 hours, after that they are removed from redis
+	// These values are only cached for 72 hours, after that they are removed from redis
 	// but still available in our mongo database.
 	// If the account was fetch from database, it will be cached into redis to prevent further database calls in the next 72 hours.
 	var (
