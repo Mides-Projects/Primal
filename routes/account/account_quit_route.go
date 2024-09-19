@@ -33,7 +33,7 @@ func QuitRoute(c fiber.Ctx) error {
 		})
 	}
 
-	state := atomic.Bool{}
+	state := &atomic.Bool{}
 	state.Store(true)
 	defer acc.SetOnline(state.Load())
 
