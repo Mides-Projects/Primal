@@ -12,9 +12,9 @@ import (
 	"sync"
 )
 
-// ServerService is a service for managing servers and server groups.
+// ServerService is a service for managing servers and server bgroups.
 // It is used to cache server information and look up servers by their ID or port.
-// It is also used to cache server groups and look up server groups by their ID.
+// It is also used to cache server bgroups and look up server bgroups by their ID.
 // The ServerService is thread-safe.
 type ServerService struct {
 	servers   map[string]*model.ServerInfo
@@ -173,13 +173,13 @@ func LoadServers(db *mongo.Database) error {
 
 func LoadGroups(database *mongo.Database) error {
 	if collectionGroups != nil {
-		return errors.New("server groups collection is already set")
+		return errors.New("server bgroups collection is already set")
 	}
 
 	if c := database.Collection("serverGroups"); c != nil {
 		cursor, err := c.Find(context.TODO(), bson.D{{}})
 		if err != nil {
-			return errors.Join(errors.New("failed to load server groups"), err)
+			return errors.Join(errors.New("failed to load server bgroups"), err)
 		}
 
 		for cursor.Next(context.Background()) {
@@ -209,7 +209,7 @@ func LoadGroups(database *mongo.Database) error {
 		return nil
 	}
 
-	return errors.New("server groups collection is nil")
+	return errors.New("server bgroups collection is nil")
 }
 
 // Server returns the server ServerService instance.

@@ -20,7 +20,7 @@ type GroupsService struct {
 	col *mongo.Collection
 }
 
-// All returns all groups.
+// All returns all bgroups.
 func (s *GroupsService) All() []*model.Group {
 	s.groupsMu.RLock()
 	defer s.groupsMu.RUnlock()
@@ -95,9 +95,9 @@ func (s *GroupsService) Hook(db *mongo.Database) error {
 		return errors.New("an instance of Service for 'Groups' already exists")
 	}
 
-	s.col = db.Collection("groups")
+	s.col = db.Collection("bgroups")
 
-	// Load groups from the database
+	// Load bgroups from the database
 	cur, err := s.col.Find(context.Background(), bson.D{})
 	if err != nil {
 		return err

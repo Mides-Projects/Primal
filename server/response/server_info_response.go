@@ -7,7 +7,7 @@ import (
 type ServerInfoResponse struct {
 	Id     string   `json:"id"`
 	Port   int64    `json:"port"`
-	Groups []string `json:"groups"`
+	Groups []string `json:"bgroups"`
 
 	PlayersCount   int      `json:"players-count"`
 	MaxSlots       int64    `json:"max-slots"`

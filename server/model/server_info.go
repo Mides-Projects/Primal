@@ -64,17 +64,17 @@ func (i *ServerInfo) SetPort(port int64) {
 	i.port = port
 }
 
-// Groups returns the server's groups.
+// Groups returns the server's bgroups.
 func (i *ServerInfo) Groups() []string {
 	return i.groups
 }
 
-// AddGroup adds a group to the server's groups.
+// AddGroup adds a group to the server's bgroups.
 func (i *ServerInfo) AddGroup(group string) {
 	i.groups = append(i.groups, group)
 }
 
-// SetGroups sets the server's groups.
+// SetGroups sets the server's bgroups.
 func (i *ServerInfo) SetGroups(groups []string) {
 	i.groups = groups
 }
@@ -232,7 +232,7 @@ func Unmarshal(m map[string]interface{}) (*ServerInfo, error) {
 
 	i := NewServerInfo(id, int64(port))
 
-	if groups, ok := m["groups"].([]interface{}); ok {
+	if groups, ok := m["bgroups"].([]interface{}); ok {
 		for _, group := range groups {
 			i.AddGroup(group.(string))
 		}
@@ -263,8 +263,8 @@ func Unmarshal(m map[string]interface{}) (*ServerInfo, error) {
 
 func (i *ServerInfo) Marshal() map[string]interface{} {
 	return map[string]interface{}{
-		"id":     i.Id(),
-		"port":   i.Port(),
-		"groups": i.Groups(),
+		"id":      i.Id(),
+		"port":    i.Port(),
+		"bgroups": i.Groups(),
 	}
 }

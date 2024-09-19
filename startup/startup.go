@@ -7,10 +7,10 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/keyauth"
 	"github.com/gofiber/fiber/v3/middleware/logger"
 	"github.com/gofiber/fiber/v3/middleware/recover"
-	accRoutes "github.com/holypvp/primal/account/routes"
 	"github.com/holypvp/primal/common"
-	grantRoutes "github.com/holypvp/primal/grantsx/routes"
-	srvRoutes "github.com/holypvp/primal/server/routes"
+	accRoutes "github.com/holypvp/primal/routes/account"
+	grantRoutes "github.com/holypvp/primal/routes/bgroups"
+	srvRoutes "github.com/holypvp/primal/routes/server"
 	"github.com/holypvp/primal/service"
 	"go.mongodb.org/mongo-driver/mongo"
 	"log"
@@ -21,7 +21,7 @@ func Hook(db *mongo.Database) error {
 	if err := service.LoadServers(db); err != nil {
 		return errors.Join(errors.New("failed to load servers"), err)
 	} else if err := service.LoadGroups(db); err != nil {
-		return errors.Join(errors.New("failed to load server groups"), err)
+		return errors.Join(errors.New("failed to load server bgroups"), err)
 	} else if err := service.Groups().Hook(db); err != nil {
 		return errors.Join(errors.New("failed to hook 'BungeeGroups'"), err)
 	} else if err := service.Grants().Hook(db); err != nil {

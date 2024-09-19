@@ -21,7 +21,7 @@ type Group struct {
 	hidden bool  // Hidden status of the group
 
 	permissions []string // Permissions of the group
-	inherits    []string // Inherited groups
+	inherits    []string // Inherited bgroups
 
 	// Metadata usually contains the next steps to be taken by the group.
 	// queue_eviction_time: managed by the queue service
@@ -132,12 +132,12 @@ func (g *Group) SetPermissions(permissions []string) {
 	g.permissions = permissions
 }
 
-// Inherits returns the inherited groups of the group.
+// Inherits returns the inherited bgroups of the group.
 func (g *Group) Inherits() []string {
 	return g.inherits
 }
 
-// SetInherits sets the inherited groups of the group.
+// SetInherits sets the inherited bgroups of the group.
 func (g *Group) SetInherits(inherits []string) {
 	g.inherits = inherits
 }
