@@ -13,7 +13,7 @@ import (
 func retrieve(c fiber.Ctx) error {
 	values := service.Groups().All()
 
-	body := make([]fiber.Map, len(values))
+	var body []fiber.Map
 	for _, g := range values {
 		body = append(body, g.Marshal())
 	}
