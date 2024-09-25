@@ -8,11 +8,11 @@ import (
 	"net/http"
 )
 
-func GrantsLookupRoute(c fiber.Ctx) error {
+func LookupRoute(c fiber.Ctx) error {
 	t := c.Params("type")
 	if t != "" && t != "active" && t != "expired" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"message": "Invalid type",
+			"message": "Parameter 'type' must be either 'active', 'expired' or empty",
 			"code":    http.StatusBadRequest,
 		})
 	}

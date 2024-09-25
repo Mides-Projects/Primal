@@ -18,13 +18,17 @@ func retrieve(c fiber.Ctx) error {
 		body = append(body, g.Marshal())
 	}
 
+	if body == nil {
+		return c.Status(http.StatusNoContent).SendString("{}")
+	}
+
 	return c.Status(http.StatusOK).JSON(body)
 }
 
 func Hook(app *fiber.App) {
 	// r.RouteNotFound(func(c *fiber.Ctx) error {
 
-	g := app.Group("/v1/bgroups")
+	g := app.Group("/v1/groups")
 	g.Post("/:name/create/", create)
 	g.Get("/", retrieve)
 	// g.RouteNotFound("/*", func(_ echo.Context) error {
@@ -32,8 +36,8 @@ func Hook(app *fiber.App) {
 	// })
 
 	gg := app.Group("/v1/grants")
-	gg.Get("/:value/lookup/:type", grants.GrantsLookupRoute)
-	gg.Get("/:value/lookup", grants.GrantsLookupRoute)
+	gg.Get("/:value/lookup/:type", grants.LookupRoute)
+	gg.Get("/:value/lookup", grants.LookupRoute)
 	gg.Post("/:name/create", grants.GrantsCreateRoute)
 	// gg.RouteNotFound("/*", func(_ echo.Context) error {
 	// 	return common.HTTPError(echo.ErrLocked.Code, "This route is not available")

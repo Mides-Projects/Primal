@@ -216,7 +216,12 @@ func (s *AccountService) lookupAtRedis(k, v string) (*account.Account, error) {
 
 func (s *AccountService) lookupAtMongo(k, v string) (*account.Account, error) {
 	var acc account.Account
+
 	if err := s.col.FindOne(context.TODO(), bson.D{{k, v}}).Decode(&acc); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, nil
+		}
+
 		return nil, err
 	}
 

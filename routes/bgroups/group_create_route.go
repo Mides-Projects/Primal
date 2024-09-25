@@ -27,5 +27,5 @@ func create(c fiber.Ctx) error {
 		}
 	}()
 
-	return c.Status(http.StatusOK).JSON(g)
+	return c.Status(http.StatusOK).JSON(g.Marshal())
 }

@@ -117,6 +117,8 @@ func (s *GroupsService) Hook(db *mongo.Database) error {
 		s.Cache(g)
 	}
 
+	common.Log.Printf("Successfully loaded %d groups", len(s.groups))
+
 	return nil
 }
 
