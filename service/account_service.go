@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/holypvp/primal/account"
 	"github.com/holypvp/primal/common"
+	"github.com/holypvp/primal/model"
 	"github.com/redis/go-redis/v9"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -18,7 +18,7 @@ type AccountService struct {
 	col *mongo.Collection
 
 	accountsMu sync.RWMutex
-	accounts   map[string]*account.Account
+	accounts   map[string]*model.Account
 
 	accountsIdMu sync.RWMutex
 	accountsId   map[string]string
@@ -26,7 +26,7 @@ type AccountService struct {
 
 // LookupById retrieves an account by its ID. It's safe to use this method because
 // it's only reading the map.
-func (s *AccountService) LookupById(id string) *account.Account {
+func (s *AccountService) LookupById(id string) *model.Account {
 	s.accountsMu.RLock()
 	defer s.accountsMu.RUnlock()
 
@@ -35,7 +35,7 @@ func (s *AccountService) LookupById(id string) *account.Account {
 
 // LookupByName retrieves an account by its name. It's safe to use this method because
 // it's only reading the map.
-func (s *AccountService) LookupByName(name string) *account.Account {
+func (s *AccountService) LookupByName(name string) *model.Account {
 	s.accountsIdMu.RLock()
 	defer s.accountsIdMu.RUnlock()
 
@@ -48,7 +48,7 @@ func (s *AccountService) LookupByName(name string) *account.Account {
 
 // UnsafeLookupById retrieves an account by its ID. It's unsafe to use this method because
 // it's reading from the Redis database.
-func (s *AccountService) UnsafeLookupById(id string) (*account.Account, error) {
+func (s *AccountService) UnsafeLookupById(id string) (*model.Account, error) {
 	if acc := s.LookupById(id); acc != nil {
 		return acc, nil
 	}
@@ -57,7 +57,7 @@ func (s *AccountService) UnsafeLookupById(id string) (*account.Account, error) {
 	// but still available in our mongo database.
 	// If the account was fetch from database, it will be cached into redis to prevent further database calls in the next 72 hours.
 	var (
-		acc *account.Account
+		acc *model.Account
 		err error
 	)
 	if acc, err = s.lookupAtRedis("primal%ids:", id); err != nil {
@@ -75,36 +75,18 @@ func (s *AccountService) UnsafeLookupById(id string) (*account.Account, error) {
 	s.Cache(acc)
 
 	return acc, nil
-
-	// val, err := common.RedisClient.Get(context.Background(), "primal%ids:"+id).Result()
-	// if errors.Is(err, redis.Nil) {
-	// 	return nil, nil
-	// } else if err != nil {
-	// 	return nil, err
-	// } else if val == "" {
-	// 	return nil, errors.New("empty value")
-	// } else {
-	// 	acc := &account.Account{}
-	// 	if err = acc.UnmarshalString(val); err != nil {
-	// 		return nil, err
-	// 	}
-	//
-	// 	s.Cache(acc)
-	//
-	// 	return acc, nil
-	// }
 }
 
 // UnsafeLookupByName retrieves an account by its name. It's unsafe to use this method because
 // it's reading from the Redis database.
-func (s *AccountService) UnsafeLookupByName(name string) (*account.Account, error) {
+func (s *AccountService) UnsafeLookupByName(name string) (*model.Account, error) {
 	if acc := s.LookupByName(name); acc != nil {
 		return acc, nil
 	}
 
 	val, err := common.RedisClient.Get(context.Background(), "primal%names:"+strings.ToLower(name)).Result()
 	if errors.Is(err, redis.Nil) {
-		return nil, errors.New("key does not exists")
+		return nil, nil
 	}
 
 	if err != nil {
@@ -115,7 +97,7 @@ func (s *AccountService) UnsafeLookupByName(name string) (*account.Account, erro
 		return nil, errors.New("empty value")
 	}
 
-	acc := &account.Account{}
+	acc := &model.Account{}
 	if acc.UnmarshalString(val) != nil {
 		return nil, err
 	}
@@ -136,7 +118,7 @@ func (s *AccountService) UpdateName(oldName, newName, id string) {
 }
 
 // Cache caches an account.
-func (s *AccountService) Cache(a *account.Account) {
+func (s *AccountService) Cache(a *model.Account) {
 	s.accountsMu.Lock()
 	s.accounts[a.Id()] = a
 	s.accountsMu.Unlock()
@@ -147,7 +129,7 @@ func (s *AccountService) Cache(a *account.Account) {
 }
 
 // RedisCache caches an account into the Redis database.
-func (s *AccountService) RedisCache(acc *account.Account) error {
+func (s *AccountService) RedisCache(acc *model.Account) error {
 	if common.RedisClient == nil {
 		return errors.New("redis client not found")
 	}
@@ -168,7 +150,7 @@ func (s *AccountService) RedisCache(acc *account.Account) error {
 }
 
 // Update updates an account.
-func (s *AccountService) Update(acc *account.Account) error {
+func (s *AccountService) Update(acc *model.Account) error {
 	if s.col == nil {
 		return errors.New("service not hooked to the database")
 	}
@@ -196,7 +178,7 @@ func (s *AccountService) Update(acc *account.Account) error {
 	return nil
 }
 
-func (s *AccountService) lookupAtRedis(k, v string) (*account.Account, error) {
+func (s *AccountService) lookupAtRedis(k, v string) (*model.Account, error) {
 	val, err := common.RedisClient.Get(context.Background(), k+v).Result()
 	if errors.Is(err, redis.Nil) {
 		return nil, nil
@@ -205,7 +187,7 @@ func (s *AccountService) lookupAtRedis(k, v string) (*account.Account, error) {
 	} else if val == "" {
 		return nil, errors.New("empty value")
 	} else {
-		acc := &account.Account{}
+		acc := &model.Account{}
 		if acc.UnmarshalString(val) != nil {
 			return nil, err
 		}
@@ -214,8 +196,8 @@ func (s *AccountService) lookupAtRedis(k, v string) (*account.Account, error) {
 	}
 }
 
-func (s *AccountService) lookupAtMongo(k, v string) (*account.Account, error) {
-	var acc account.Account
+func (s *AccountService) lookupAtMongo(k, v string) (*model.Account, error) {
+	var acc model.Account
 
 	if err := s.col.FindOne(context.TODO(), bson.D{{k, v}}).Decode(&acc); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
@@ -245,6 +227,6 @@ func Account() *AccountService {
 }
 
 var accountService = &AccountService{
-	accounts:   make(map[string]*account.Account),
+	accounts:   make(map[string]*model.Account),
 	accountsId: make(map[string]string),
 }

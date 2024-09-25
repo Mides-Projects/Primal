@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
-	"github.com/holypvp/primal/server/model"
+	"github.com/holypvp/primal/model/server"
 	"github.com/holypvp/primal/server/pubsub"
 	"github.com/holypvp/primal/service"
 	"log"
@@ -39,7 +39,7 @@ func ServerCreateRoute(c fiber.Ctx) error {
 		return common.HTTPError(c, http.StatusConflict, fmt.Sprintf("Port %d already in use", portNum))
 	}
 
-	serverInfo = model.NewServerInfo(id, portNum)
+	serverInfo = server.NewServerInfo(id, portNum)
 	serverInfo.SetInitialTime(time.Now().UnixMilli())
 
 	service.Server().CacheServer(serverInfo)

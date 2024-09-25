@@ -3,7 +3,7 @@ package bgroups
 import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
-	"github.com/holypvp/primal/grantsx/model"
+	"github.com/holypvp/primal/model/grantsx"
 	"github.com/holypvp/primal/service"
 	"net/http"
 )
@@ -18,7 +18,7 @@ func create(c fiber.Ctx) error {
 		return common.HTTPError(c, http.StatusConflict, "Group already exists")
 	}
 
-	g := model.EmptyGroup(name)
+	g := grantsx.EmptyGroup(name)
 	service.Groups().Cache(g)
 
 	go func() {

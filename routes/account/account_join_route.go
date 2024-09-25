@@ -2,8 +2,8 @@ package account
 
 import (
 	"github.com/gofiber/fiber/v3"
-	"github.com/holypvp/primal/account"
 	"github.com/holypvp/primal/common"
+	"github.com/holypvp/primal/model"
 	"github.com/holypvp/primal/service"
 	"net/http"
 	"time"
@@ -52,7 +52,7 @@ func JoinRoute(c fiber.Ctx) error {
 
 	empty := acc == nil
 	if acc == nil {
-		acc = account.Empty(id, "")
+		acc = model.Empty(id, "")
 	}
 
 	if acc.Name() != name {

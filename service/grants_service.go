@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"errors"
-	"github.com/holypvp/primal/grantsx/model"
+	"github.com/holypvp/primal/model/grantsx"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"sync"
@@ -11,23 +11,23 @@ import (
 
 type GrantsService struct {
 	accountsMu sync.RWMutex
-	accounts   map[string]*model.GrantsAccount
+	accounts   map[string]*grantsx.Tracker
 
 	col *mongo.Collection
 }
 
-// Lookup retrieves a GrantsAccount from the cache by its ID.
-func (s *GrantsService) Lookup(id string) *model.GrantsAccount {
+// Lookup retrieves a Tracker from the cache by its ID.
+func (s *GrantsService) Lookup(id string) *grantsx.Tracker {
 	s.accountsMu.RLock()
 	defer s.accountsMu.RUnlock()
 
 	return s.accounts[id]
 }
 
-// UnsafeLookup retrieves a GrantsAccount from the cache by its ID.
+// UnsafeLookup retrieves a Tracker from the cache by its ID.
 // If the account is not found in the cache, it will be fetched from the database.
 // This method is not thread-safe and should be used with caution in goroutines.
-func (s *GrantsService) UnsafeLookup(id string) (*model.GrantsAccount, error) {
+func (s *GrantsService) UnsafeLookup(id string) (*grantsx.Tracker, error) {
 	if ga := s.Lookup(id); ga != nil {
 		return ga, nil
 	}
@@ -46,14 +46,14 @@ func (s *GrantsService) UnsafeLookup(id string) (*model.GrantsAccount, error) {
 		return nil, err
 	}
 
-	ga := model.EmptyGrantsAccount(acc)
+	ga := grantsx.EmptyGrantsAccount(acc)
 	for cur.Next(context.Background()) {
 		var body map[string]interface{}
 		if err := cur.Decode(&body); err != nil {
 			return nil, err
 		}
 
-		g := &model.Grant{}
+		g := &grantsx.Grant{}
 		if err := g.Unmarshal(body); err != nil {
 			return nil, err
 		}
@@ -71,8 +71,8 @@ func (s *GrantsService) UnsafeLookup(id string) (*model.GrantsAccount, error) {
 }
 
 // HighestGroupBy retrieves the highest group by its ID.
-func (s *GrantsService) HighestGroupBy(ga *model.GrantsAccount) *model.Group {
-	var highest *model.Group
+func (s *GrantsService) HighestGroupBy(ga *grantsx.Tracker) *grantsx.Group {
+	var highest *grantsx.Group
 	for _, gr := range ga.ActiveGrants() {
 		if gr.Identifier().Key() != "group" {
 			continue
@@ -91,15 +91,15 @@ func (s *GrantsService) HighestGroupBy(ga *model.GrantsAccount) *model.Group {
 	return highest
 }
 
-// Cache caches a GrantsAccount.
-func (s *GrantsService) Cache(ga *model.GrantsAccount) {
+// Cache caches a Tracker.
+func (s *GrantsService) Cache(ga *grantsx.Tracker) {
 	s.accountsMu.Lock()
 	s.accounts[ga.Account().Id()] = ga
 	s.accountsMu.Unlock()
 }
 
 // Save saves a grant.
-func (s *GrantsService) Save(srcId string, g *model.Grant) error {
+func (s *GrantsService) Save(srcId string, g *grantsx.Grant) error {
 	if s.col == nil {
 		return errors.New("service not hooked to the database")
 	}
@@ -124,7 +124,7 @@ func (s *GrantsService) Hook(db *mongo.Database) error {
 		return errors.New("an instance of GrantsService already exists")
 	}
 
-	s.col = db.Collection("grants")
+	s.col = db.Collection("grantsx")
 
 	return nil
 }
@@ -134,5 +134,5 @@ func Grants() *GrantsService {
 }
 
 var grantsService = &GrantsService{
-	accounts: make(map[string]*model.GrantsAccount),
+	accounts: make(map[string]*grantsx.Tracker),
 }

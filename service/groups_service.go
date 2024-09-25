@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/holypvp/primal/common"
-	"github.com/holypvp/primal/grantsx/model"
+	"github.com/holypvp/primal/model/grantsx"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -15,13 +15,13 @@ import (
 
 type GroupsService struct {
 	groupsMu sync.RWMutex
-	groups   map[string]*model.Group
+	groups   map[string]*grantsx.Group
 
 	col *mongo.Collection
 }
 
 // All returns all bgroups.
-func (s *GroupsService) All() []*model.Group {
+func (s *GroupsService) All() []*grantsx.Group {
 	s.groupsMu.RLock()
 	defer s.groupsMu.RUnlock()
 
@@ -29,7 +29,7 @@ func (s *GroupsService) All() []*model.Group {
 }
 
 // LookupById looks up a group by its ID.
-func (s *GroupsService) LookupById(id string) *model.Group {
+func (s *GroupsService) LookupById(id string) *grantsx.Group {
 	s.groupsMu.RLock()
 	defer s.groupsMu.RUnlock()
 
@@ -42,7 +42,7 @@ func (s *GroupsService) LookupById(id string) *model.Group {
 }
 
 // LookupByName looks up a group by its name.
-func (s *GroupsService) LookupByName(name string) *model.Group {
+func (s *GroupsService) LookupByName(name string) *grantsx.Group {
 	s.groupsMu.RLock()
 	defer s.groupsMu.RUnlock()
 
@@ -59,13 +59,13 @@ func (s *GroupsService) LookupByName(name string) *model.Group {
 }
 
 // Cache caches a group.
-func (s *GroupsService) Cache(g *model.Group) {
+func (s *GroupsService) Cache(g *grantsx.Group) {
 	s.groupsMu.Lock()
 	s.groups[g.Id()] = g
 	s.groupsMu.Unlock()
 }
 
-func (s *GroupsService) Save(g *model.Group) error {
+func (s *GroupsService) Save(g *grantsx.Group) error {
 	if s.col == nil {
 		return errors.New("service not hooked to the database")
 	}
@@ -109,7 +109,7 @@ func (s *GroupsService) Hook(db *mongo.Database) error {
 			return err
 		}
 
-		g := &model.Group{}
+		g := &grantsx.Group{}
 		if err := g.Unmarshal(body); err != nil {
 			return err
 		}
@@ -127,5 +127,5 @@ func Groups() *GroupsService {
 }
 
 var groupsService = &GroupsService{
-	groups: make(map[string]*model.Group),
+	groups: make(map[string]*grantsx.Group),
 }

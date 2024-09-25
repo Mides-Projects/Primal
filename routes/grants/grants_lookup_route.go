@@ -2,8 +2,8 @@ package grants
 
 import (
 	"github.com/gofiber/fiber/v3"
-	"github.com/holypvp/primal/account"
-	"github.com/holypvp/primal/common"
+	"github.com/holypvp/primal/model"
+	"github.com/holypvp/primal/model/grantsx"
 	"github.com/holypvp/primal/service"
 	"net/http"
 )
@@ -42,7 +42,7 @@ func LookupRoute(c fiber.Ctx) error {
 
 	if state != "online" && state != "offline" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"message": "Invalid state",
+			"message": "You can only lookup online or offline players",
 			"code":    http.StatusBadRequest,
 		})
 	}
@@ -55,31 +55,24 @@ func LookupRoute(c fiber.Ctx) error {
 		})
 	}
 
-	var acc *account.Account
-	var err error
-
-	if state == "online" {
-		if src == "name" {
-			acc = service.Account().LookupByName(v)
-		} else {
-			acc = service.Account().LookupById(v)
-		}
+	var (
+		acc *model.Account
+		err error
+	)
+	if src == "name" {
+		acc, err = service.Account().UnsafeLookupByName(v)
 	} else {
-		if src == "name" {
-			acc, err = service.Account().UnsafeLookupByName(v)
-		} else {
-			acc, err = service.Account().UnsafeLookupById(v)
-		}
+		acc, err = service.Account().UnsafeLookupById(v)
 	}
 
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Failed to lookup account: " + err.Error(),
+			"message": err.Error(),
 			"code":    http.StatusInternalServerError,
 		})
 	} else if acc == nil && state == "online" {
 		return c.Status(http.StatusServiceUnavailable).JSON(fiber.Map{
-			"message": "Account is not online, but the state is set to online",
+			"message": "State is 'online' but account never joined",
 			"code":    http.StatusServiceUnavailable,
 		})
 	} else if acc == nil {
@@ -91,28 +84,43 @@ func LookupRoute(c fiber.Ctx) error {
 
 	ga, err := service.Grants().UnsafeLookup(acc.Id())
 	if err != nil {
-		return common.HTTPError(c, http.StatusInternalServerError, "Failed to lookup grant: "+err.Error())
+		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+			"message": err.Error(),
+			"code":    http.StatusInternalServerError,
+		})
 	} else if ga == nil {
-		return common.HTTPError(c, http.StatusNotFound, "Player not found")
+		ga = grantsx.EmptyGrantsAccount(acc)
 	}
 
 	if state == "online" && service.Grants().Lookup(ga.Account().Id()) == nil {
 		service.Grants().Cache(ga)
 	}
 
-	return c.Status(http.StatusOK).JSON(marshalByType(t, ga.Marshal()))
+	return c.Status(http.StatusOK).JSON(marshal(ga, t))
 }
 
-func marshalByType(t string, body map[string]interface{}) map[string]interface{} {
+// marshal returns the grantsx account as a map.
+func marshal(ga *grantsx.Tracker, t string) map[string]interface{} {
+	body := map[string]interface{}{}
 	if t == "" {
-		return body
+		body["expired"] = ga.ExpiredGrants()
 	}
 
-	if t == "active" {
-		delete(body, "expired_grants")
-	} else {
-		delete(body, "active_grants")
+	body["active"] = ga.ActiveGrants()
+	body["id"] = ga.Account().Id()
+
+	var all []map[string]interface{}
+	for _, g := range ga.ActiveGrants() {
+		all = append(all, g.Marshal())
 	}
+
+	if t != "active" {
+		for _, g := range ga.ExpiredGrants() {
+			all = append(all, g.Marshal())
+		}
+	}
+
+	body["all"] = all
 
 	return body
 }

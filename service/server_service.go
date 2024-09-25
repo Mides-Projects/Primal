@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/holypvp/primal/common"
-	"github.com/holypvp/primal/server/model"
+	"github.com/holypvp/primal/model/server"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -17,15 +17,15 @@ import (
 // It is also used to cache server bgroups and look up server bgroups by their ID.
 // The ServerService is thread-safe.
 type ServerService struct {
-	servers   map[string]*model.ServerInfo
+	servers   map[string]*server.ServerInfo
 	serversMu sync.Mutex
 
-	groups   map[string]*model.ServerGroup
+	groups   map[string]*server.ServerGroup
 	groupsMu sync.Mutex
 }
 
 // LookupById looks up a server by its ID.
-func (s *ServerService) LookupById(id string) *model.ServerInfo {
+func (s *ServerService) LookupById(id string) *server.ServerInfo {
 	s.serversMu.Lock()
 	defer s.serversMu.Unlock()
 
@@ -38,7 +38,7 @@ func (s *ServerService) LookupById(id string) *model.ServerInfo {
 }
 
 // LookupByPort looks up a server by its port.
-func (s *ServerService) LookupByPort(port int64) *model.ServerInfo {
+func (s *ServerService) LookupByPort(port int64) *server.ServerInfo {
 	s.serversMu.Lock()
 	defer s.serversMu.Unlock()
 
@@ -52,7 +52,7 @@ func (s *ServerService) LookupByPort(port int64) *model.ServerInfo {
 }
 
 // CacheServer caches a server in the ServerService.
-func (s *ServerService) CacheServer(server *model.ServerInfo) {
+func (s *ServerService) CacheServer(server *server.ServerInfo) {
 	s.serversMu.Lock()
 	s.servers[server.Id()] = server
 	s.serversMu.Unlock()
@@ -65,7 +65,7 @@ func (s *ServerService) DestroyServer(id string) {
 	s.serversMu.Unlock()
 }
 
-func (s *ServerService) Servers() []*model.ServerInfo {
+func (s *ServerService) Servers() []*server.ServerInfo {
 	s.serversMu.Lock()
 	defer s.serversMu.Unlock()
 
@@ -73,7 +73,7 @@ func (s *ServerService) Servers() []*model.ServerInfo {
 }
 
 // LookupGroupById looks up a server group by its ID.
-func (s *ServerService) LookupGroupById(id string) *model.ServerGroup {
+func (s *ServerService) LookupGroupById(id string) *server.ServerGroup {
 	s.groupsMu.Lock()
 	defer s.groupsMu.Unlock()
 
@@ -86,7 +86,7 @@ func (s *ServerService) LookupGroupById(id string) *model.ServerGroup {
 }
 
 // CacheGroup caches a server group in the ServerService.
-func (s *ServerService) CacheGroup(group *model.ServerGroup) {
+func (s *ServerService) CacheGroup(group *server.ServerGroup) {
 	s.groupsMu.Lock()
 	s.groups[group.Id()] = group
 	s.groupsMu.Unlock()
@@ -99,7 +99,7 @@ func (s *ServerService) DestroyGroup(id string) {
 	s.groupsMu.Unlock()
 }
 
-func (s *ServerService) Groups() []*model.ServerGroup {
+func (s *ServerService) Groups() []*server.ServerGroup {
 	s.groupsMu.Lock()
 	defer s.groupsMu.Unlock()
 
@@ -147,7 +147,7 @@ func LoadServers(db *mongo.Database) error {
 				return errors.Join(errors.New("failed to decode server"), err)
 			}
 
-			i, err := model.Unmarshal(result)
+			i, err := server.Unmarshal(result)
 			if err != nil {
 				return errors.Join(errors.New("failed to unmarshal server"), err)
 			}
@@ -188,7 +188,7 @@ func LoadGroups(database *mongo.Database) error {
 				return errors.Join(errors.New("failed to decode server group"), err)
 			}
 
-			g := &model.ServerGroup{}
+			g := &server.ServerGroup{}
 			if err := g.Unmarshal(result); err != nil {
 				return errors.Join(errors.New("failed to unmarshal server group"), err)
 			}
@@ -219,8 +219,8 @@ func Server() *ServerService {
 
 var (
 	serverService = &ServerService{
-		servers: make(map[string]*model.ServerInfo),
-		groups:  make(map[string]*model.ServerGroup),
+		servers: make(map[string]*server.ServerInfo),
+		groups:  make(map[string]*server.ServerGroup),
 	}
 
 	collectionServers *mongo.Collection
