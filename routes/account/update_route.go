@@ -12,7 +12,6 @@ func UpdateRoute(c fiber.Ctx) error {
 	if id == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Missing 'id' parameter",
-			"code":    http.StatusBadRequest,
 		})
 	}
 
@@ -20,31 +19,27 @@ func UpdateRoute(c fiber.Ctx) error {
 	if err := c.Bind().Body(&body); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Failed to bind request body: " + err.Error(),
-			"code":    http.StatusBadRequest,
 		})
 	}
 
 	displayName, ok := body["display_name"].(string)
 	if !ok || displayName == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"message": "Missing 'display_name' field",
-			"code":    http.StatusBadRequest,
+			"message": "Missing 'display_name' body field",
 		})
 	}
 
 	operator, ok := body["operator"].(bool)
 	if !ok {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"message": "Missing 'operator' field",
-			"code":    http.StatusBadRequest,
+			"message": "Missing 'operator' body field",
 		})
 	}
 
 	highestGroup, ok := body["highest_group"].(string)
 	if !ok || highestGroup == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"message": "Missing 'highest_group' field",
-			"code":    http.StatusBadRequest,
+			"message": "Missing 'highest_group' body field",
 		})
 	}
 
@@ -82,6 +77,5 @@ func UpdateRoute(c fiber.Ctx) error {
 
 	return c.Status(http.StatusOK).JSON(fiber.Map{
 		"message": "Account has been updated",
-		"code":    http.StatusOK,
 	})
 }

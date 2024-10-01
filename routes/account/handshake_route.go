@@ -9,12 +9,11 @@ import (
 	"time"
 )
 
-func JoinRoute(c fiber.Ctx) error {
+func HandshakeRoute(c fiber.Ctx) error {
 	id := c.Params("id")
 	if id == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Missing 'id' parameter",
-			"code":    http.StatusBadRequest,
 		})
 	}
 
@@ -22,31 +21,37 @@ func JoinRoute(c fiber.Ctx) error {
 	if err := c.Bind().Body(&body); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Failed to parse body: " + err.Error(),
-			"code":    http.StatusBadRequest,
 		})
 	}
 
 	serverName, ok := body["server"].(string)
 	if !ok || serverName == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"message": "Missing 'server' parameter",
-			"code":    http.StatusBadRequest,
+			"message": "Missing 'server' body field",
 		})
 	}
 
 	name, ok := body["name"].(string)
 	if !ok || name == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"message": "Missing 'name' query parameter",
-			"code":    http.StatusBadRequest,
+			"message": "Missing 'name' body field",
 		})
 	}
 
-	acc, err := service.Account().UnsafeLookupById(id)
-	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Failed to lookup account: " + err.Error(),
-			"code":    http.StatusInternalServerError,
+	exists := c.Query("exists")
+	if exists == "" {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "Missing 'exists' query parameter",
+		})
+	}
+
+	// TODO: Fix this because I need to let know him if the player already exists or not
+	// if not exists, create a new account
+
+	acc := service.Account().LookupById(id)
+	if acc == nil && exists == "true" {
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{
+			"message": "Account for " + name + " not found",
 		})
 	}
 
@@ -67,7 +72,7 @@ func JoinRoute(c fiber.Ctx) error {
 		}
 
 		go func() {
-			if err = service.Account().Update(acc); err != nil {
+			if err := service.Account().Update(acc); err != nil {
 				common.Log.Fatalf("Failed to update account: %s", err)
 			}
 		}()
@@ -91,7 +96,8 @@ func JoinRoute(c fiber.Ctx) error {
 // Hook registers the route to the app
 func Hook(app *fiber.App) {
 	g := app.Group("/v1/account")
-	g.Put("/:id/join", JoinRoute)
+	g.Put("/:id/handshake", HandshakeRoute)
 	g.Patch("/:id/update", UpdateRoute)
+	g.Get("/:id/lookup", LookupRoute)
 	g.Patch("/:id/quit", QuitRoute)
 }

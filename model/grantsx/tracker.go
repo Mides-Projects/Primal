@@ -15,7 +15,7 @@ type Tracker struct {
 	expiredGrants []*Grant     // Expired grantsx of the account
 }
 
-func EmptyGrantsAccount(account *model.Account) *Tracker {
+func EmptyTracker(account *model.Account) *Tracker {
 	return &Tracker{
 		account:       account,
 		activeGrants:  make([]*Grant, 0),
@@ -24,32 +24,52 @@ func EmptyGrantsAccount(account *model.Account) *Tracker {
 }
 
 // Account returns the account of the account.
-func (ga *Tracker) Account() *model.Account {
-	return ga.account
+func (t *Tracker) Account() *model.Account {
+	return t.account
 }
 
 // ActiveGrants returns the active grantsx of the account.
-func (ga *Tracker) ActiveGrants() []*Grant {
-	return ga.activeGrants
+func (t *Tracker) ActiveGrants() []*Grant {
+	return t.activeGrants
 }
 
 // AddActiveGrant adds a grant to the account.
-func (ga *Tracker) AddActiveGrant(g *Grant) {
-	ga.activeMu.Lock()
-	defer ga.activeMu.Unlock()
+func (t *Tracker) AddActiveGrant(g *Grant) {
+	t.activeMu.Lock()
+	defer t.activeMu.Unlock()
 
-	ga.activeGrants = append(ga.activeGrants, g)
+	t.activeGrants = append(t.activeGrants, g)
 }
 
 // ExpiredGrants returns the expired grantsx of the account.
-func (ga *Tracker) ExpiredGrants() []*Grant {
-	return ga.expiredGrants
+func (t *Tracker) ExpiredGrants() []*Grant {
+	return t.expiredGrants
 }
 
 // AddExpiredGrant adds an expired grant to the account.
-func (ga *Tracker) AddExpiredGrant(g *Grant) {
-	ga.expiredMu.Lock()
-	defer ga.expiredMu.Unlock()
+func (t *Tracker) AddExpiredGrant(g *Grant) {
+	t.expiredMu.Lock()
+	defer t.expiredMu.Unlock()
 
-	ga.expiredGrants = append(ga.expiredGrants, g)
+	t.expiredGrants = append(t.expiredGrants, g)
+}
+
+// Marshal returns the grants as a map.
+// if filter is "active", only active grants are returned.
+// if filter is empty, all grants are returned.
+func (t *Tracker) Marshal(filter string) []map[string]interface{} {
+	var body []map[string]interface{}
+	for _, g := range t.activeGrants {
+		body = append(body, g.Marshal())
+	}
+
+	if filter == "active" {
+		return body
+	}
+
+	for _, g := range t.expiredGrants {
+		body = append(body, g.Marshal())
+	}
+
+	return body
 }

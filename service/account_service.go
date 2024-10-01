@@ -216,7 +216,7 @@ func (s *AccountService) Hook(db *mongo.Database) error {
 		return errors.New("service already hooked to the database")
 	}
 
-	s.col = db.Collection("accounts")
+	s.col = db.Collection("trackers")
 
 	return nil
 }

@@ -13,7 +13,6 @@ func QuitRoute(c fiber.Ctx) error {
 	if id == "" {
 		return c.Status(http.StatusNotFound).JSON(fiber.Map{
 			"message": "Missing 'id' parameter",
-			"code":    http.StatusNotFound,
 		})
 	}
 
@@ -21,7 +20,6 @@ func QuitRoute(c fiber.Ctx) error {
 	if acc == nil || !acc.Online() {
 		return c.Status(http.StatusServiceUnavailable).JSON(fiber.Map{
 			"message": "You are not logged in",
-			"code":    http.StatusServiceUnavailable,
 		})
 	}
 
@@ -29,7 +27,6 @@ func QuitRoute(c fiber.Ctx) error {
 	if err := c.Bind().Body(&body); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Failed to parse body: " + err.Error(),
-			"code":    http.StatusBadRequest,
 		})
 	}
 
@@ -40,24 +37,21 @@ func QuitRoute(c fiber.Ctx) error {
 	displayName, ok := body["display_name"].(string)
 	if !ok || displayName == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"message": "Missing 'display_name' parameter",
-			"code":    http.StatusBadRequest,
+			"message": "Missing 'display_name' body field",
 		})
 	}
 
 	highestGroup, ok := body["highest_group"].(string)
 	if !ok || highestGroup == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"message": "Missing 'highest_group' parameter",
-			"code":    http.StatusBadRequest,
+			"message": "Missing 'highest_group' body field",
 		})
 	}
 
 	timestamp, ok := body["timestamp"].(float64)
 	if !ok || timestamp == 0 {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"message": "Missing 'timestamp' parameter",
-			"code":    http.StatusBadRequest,
+			"message": "Missing 'timestamp' body field",
 		})
 	}
 
@@ -94,6 +88,5 @@ func QuitRoute(c fiber.Ctx) error {
 
 	return c.Status(http.StatusOK).JSON(fiber.Map{
 		"message": "You have successfully logged out",
-		"code":    http.StatusOK,
 	})
 }

@@ -10,18 +10,18 @@ import (
 )
 
 type GrantsService struct {
-	accountsMu sync.RWMutex
-	accounts   map[string]*grantsx.Tracker
+	trackersMu sync.RWMutex
+	trackers   map[string]*grantsx.Tracker
 
 	col *mongo.Collection
 }
 
 // Lookup retrieves a Tracker from the cache by its ID.
 func (s *GrantsService) Lookup(id string) *grantsx.Tracker {
-	s.accountsMu.RLock()
-	defer s.accountsMu.RUnlock()
+	s.trackersMu.RLock()
+	defer s.trackersMu.RUnlock()
 
-	return s.accounts[id]
+	return s.trackers[id]
 }
 
 // UnsafeLookup retrieves a Tracker from the cache by its ID.
@@ -46,15 +46,15 @@ func (s *GrantsService) UnsafeLookup(id string) (*grantsx.Tracker, error) {
 		return nil, err
 	}
 
-	ga := grantsx.EmptyGrantsAccount(acc)
+	ga := grantsx.EmptyTracker(acc)
 	for cur.Next(context.Background()) {
 		var body map[string]interface{}
-		if err := cur.Decode(&body); err != nil {
+		if err = cur.Decode(&body); err != nil {
 			return nil, err
 		}
 
 		g := &grantsx.Grant{}
-		if err := g.Unmarshal(body); err != nil {
+		if err = g.Unmarshal(body); err != nil {
 			return nil, err
 		}
 
@@ -92,10 +92,10 @@ func (s *GrantsService) HighestGroupBy(ga *grantsx.Tracker) *grantsx.Group {
 }
 
 // Cache caches a Tracker.
-func (s *GrantsService) Cache(ga *grantsx.Tracker) {
-	s.accountsMu.Lock()
-	s.accounts[ga.Account().Id()] = ga
-	s.accountsMu.Unlock()
+func (s *GrantsService) Cache(t *grantsx.Tracker) {
+	s.trackersMu.Lock()
+	s.trackers[t.Account().Id()] = t
+	s.trackersMu.Unlock()
 }
 
 // Save saves a grant.
@@ -134,5 +134,5 @@ func Grants() *GrantsService {
 }
 
 var grantsService = &GrantsService{
-	accounts: make(map[string]*grantsx.Tracker),
+	trackers: make(map[string]*grantsx.Tracker),
 }
