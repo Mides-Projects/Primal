@@ -19,7 +19,7 @@ type GrantsService struct {
     col *mongo.Collection
 }
 
-// Lookup retrieves a Tracker from the cache by its ID.
+// Lookup retrieves a Tracker from the ttlCache by its ID.
 func (s *GrantsService) Lookup(id string) *grantsx.Tracker {
     s.trackersMu.RLock()
     defer s.trackersMu.RUnlock()
@@ -35,8 +35,8 @@ func (s *GrantsService) Lookup(id string) *grantsx.Tracker {
     return nil
 }
 
-// UnsafeLookup retrieves a Tracker from the cache by its ID.
-// If the account is not found in the cache, it will be fetched from the database.
+// UnsafeLookup retrieves a Tracker from the ttlCache by its ID.
+// If the account is not found in the ttlCache, it will be fetched from the database.
 // This method is not thread-safe and should be used with caution in goroutines.
 func (s *GrantsService) UnsafeLookup(id string, keep bool) (*grantsx.Tracker, error) {
     if ga := s.Lookup(id); ga != nil {

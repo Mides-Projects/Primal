@@ -21,8 +21,8 @@ type AccountService struct {
     accountsMu sync.RWMutex
     accounts   map[string]*model.Account
 
-    quarkMu sync.RWMutex
-    cache   *quark.Quark[*model.Account]
+    ttlCacheMu sync.RWMutex
+    ttlCache   *quark.Quark[*model.Account]
 
     accountsIdMu sync.RWMutex
     accountsId   map[string]string
@@ -38,10 +38,10 @@ func (s *AccountService) LookupById(id string) *model.Account {
         return acc
     }
 
-    s.quarkMu.RLock()
-    defer s.quarkMu.RUnlock()
+    s.ttlCacheMu.RLock()
+    defer s.ttlCacheMu.RUnlock()
 
-    if acc, ok := s.cache.Get(id); ok {
+    if acc, ok := s.ttlCache.Get(id); ok {
         return acc
     }
 
@@ -132,8 +132,8 @@ func (s *AccountService) UpdateName(oldName, newName, id string) {
 
 // Cache caches an account.
 func (s *AccountService) Cache(a *model.Account, keep bool) {
-    if s.cache == nil {
-        panic("service not hooked to the cache")
+    if s.ttlCache == nil {
+        panic("service not hooked to the ttlCache")
     }
 
     if keep {
@@ -141,9 +141,9 @@ func (s *AccountService) Cache(a *model.Account, keep bool) {
         s.accounts[a.Id()] = a
         s.accountsMu.Unlock()
     } else {
-        s.quarkMu.Lock()
-        s.cache.Set(a.Id(), a)
-        s.quarkMu.Unlock()
+        s.ttlCacheMu.Lock()
+        s.ttlCache.Set(a.Id(), a)
+        s.ttlCacheMu.Unlock()
     }
 
     s.accountsIdMu.Lock()
@@ -153,9 +153,9 @@ func (s *AccountService) Cache(a *model.Account, keep bool) {
 
 // Invalidate invalidates an account.
 func (s *AccountService) Invalidate(acc *model.Account) {
-    s.quarkMu.Lock()
-    s.cache.Invalidate(acc.Id())
-    s.quarkMu.Unlock()
+    s.ttlCacheMu.Lock()
+    s.ttlCache.Invalidate(acc.Id())
+    s.ttlCacheMu.Unlock()
 
     s.accountsMu.Lock()
     delete(s.accounts, acc.Id())
@@ -256,8 +256,8 @@ func (s *AccountService) Hook(db *mongo.Database) error {
 
     s.col = db.Collection("trackers")
 
-    s.cache = quark.New[*model.Account](2*time.Hour, 2*time.Hour)
-    s.cache.SetListener(func(key string, value *model.Account, reason quark.Reason) {
+    s.ttlCache = quark.New[*model.Account](2*time.Hour, 2*time.Hour)
+    s.ttlCache.SetListener(func(key string, value *model.Account, reason quark.Reason) {
         if reason == quark.ManualReason {
             return
         }
