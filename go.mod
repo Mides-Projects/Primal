@@ -1,17 +1,17 @@
 module github.com/holypvp/primal
 
-go 1.22
+go 1.23.0
 
-toolchain go1.22.4
+toolchain go1.23.2
 
 require (
 	github.com/redis/go-redis/v9 v9.5.3
 	go.mongodb.org/mongo-driver v1.15.0
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
-	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
+	github.com/Mides-Projects/Quark v0.0.0-20241002202733-894d2a9056e8 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/bytedance/sonic v1.12.2 // indirect
 	github.com/bytedance/sonic/loader v0.2.0 // indirect
