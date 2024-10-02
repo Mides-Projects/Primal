@@ -10,9 +10,15 @@ import (
 
 func LookupRoute(c fiber.Ctx) error {
 	filter := c.Params("filter")
-	if filter != "" && filter != "active" && filter != "expired" {
+	if filter == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"message": "Parameter 'filter' must be either 'active', 'expired' or empty",
+			"message": "Missing 'filter' parameter",
+		})
+	}
+
+	if filter != "active" && filter != "all" {
+		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"message": "Parameter 'filter' must be either 'active', 'all' or empty",
 		})
 	}
 
@@ -80,14 +86,11 @@ func LookupRoute(c fiber.Ctx) error {
 			"message": err.Error(),
 		})
 	} else if ga == nil {
-		ga = grantsx.EmptyTracker(acc)
-	}
-
-	if state == "online" && service.Grants().Lookup(ga.Account().Id()) == nil {
-		service.Grants().Cache(ga)
+		ga = grantsx.EmptyTracker()
 	}
 
 	return c.Status(http.StatusOK).JSON(fiber.Map{
+		"id":     acc.Id(),
 		"grants": ga.Marshal(filter),
 		"account": func() map[string]interface{} {
 			if acc.Online() {

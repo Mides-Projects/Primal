@@ -41,12 +41,7 @@ func (s *GrantsService) UnsafeLookup(id string) (*grantsx.Tracker, error) {
 		return nil, err
 	}
 
-	acc, err := accountService.UnsafeLookupById(id)
-	if err != nil {
-		return nil, err
-	}
-
-	ga := grantsx.EmptyTracker(acc)
+	ga := grantsx.EmptyTracker()
 	for cur.Next(context.Background()) {
 		var body map[string]interface{}
 		if err = cur.Decode(&body); err != nil {
@@ -65,36 +60,15 @@ func (s *GrantsService) UnsafeLookup(id string) (*grantsx.Tracker, error) {
 		}
 	}
 
-	s.Cache(ga)
+	s.Cache(id, ga)
 
 	return ga, nil
 }
 
-// HighestGroupBy retrieves the highest group by its ID.
-func (s *GrantsService) HighestGroupBy(ga *grantsx.Tracker) *grantsx.Group {
-	var highest *grantsx.Group
-	for _, gr := range ga.ActiveGrants() {
-		if gr.Identifier().Key() != "group" {
-			continue
-		}
-
-		g := groupsService.LookupById(gr.Identifier().Value())
-		if g == nil {
-			continue
-		}
-
-		if highest == nil || g.Weight() > highest.Weight() {
-			highest = g
-		}
-	}
-
-	return highest
-}
-
 // Cache caches a Tracker.
-func (s *GrantsService) Cache(t *grantsx.Tracker) {
+func (s *GrantsService) Cache(id string, t *grantsx.Tracker) {
 	s.trackersMu.Lock()
-	s.trackers[t.Account().Id()] = t
+	s.trackers[id] = t
 	s.trackersMu.Unlock()
 }
 

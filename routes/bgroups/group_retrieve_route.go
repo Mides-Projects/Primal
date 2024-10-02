@@ -38,7 +38,7 @@ func Hook(app *fiber.App) {
 	gg := app.Group("/v1/grantsx")
 	gg.Get("/:value/lookup/:type", grants.LookupRoute)
 	gg.Get("/:value/lookup", grants.LookupRoute)
-	gg.Post("/:name/create", grants.GrantsCreateRoute)
+	gg.Post("/:name/create", grants.CreateRoute)
 	// gg.RouteNotFound("/*", func(_ echo.Context) error {
 	// 	return common.HTTPError(echo.ErrLocked.Code, "This route is not available")
 	// })

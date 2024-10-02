@@ -1,13 +1,10 @@
 package grantsx
 
 import (
-	"github.com/holypvp/primal/model"
 	"sync"
 )
 
 type Tracker struct {
-	account *model.Account // Account of the account
-
 	activeMu     sync.RWMutex // Mutex for active grantsx
 	activeGrants []*Grant     // Active grantsx of the account
 
@@ -15,17 +12,11 @@ type Tracker struct {
 	expiredGrants []*Grant     // Expired grantsx of the account
 }
 
-func EmptyTracker(account *model.Account) *Tracker {
+func EmptyTracker() *Tracker {
 	return &Tracker{
-		account:       account,
 		activeGrants:  make([]*Grant, 0),
 		expiredGrants: make([]*Grant, 0),
 	}
-}
-
-// Account returns the account of the account.
-func (t *Tracker) Account() *model.Account {
-	return t.account
 }
 
 // ActiveGrants returns the active grantsx of the account.
