@@ -6,7 +6,7 @@ import (
     quark "github.com/Mides-Projects/Quark"
     "github.com/holypvp/primal/common"
     "github.com/holypvp/primal/model"
-    "github.com/redis/go-redis/v9"
+    "github.com/holypvp/primal/redis"
     "go.mongodb.org/mongo-driver/bson"
     "go.mongodb.org/mongo-driver/mongo"
     "go.mongodb.org/mongo-driver/mongo/options"
@@ -16,7 +16,8 @@ import (
 )
 
 type AccountService struct {
-    col *mongo.Collection
+    col          *mongo.Collection
+    redisService redis.Service
 
     accountsMu sync.RWMutex
     accounts   map[string]*model.Account
@@ -26,6 +27,13 @@ type AccountService struct {
 
     accountsIdMu sync.RWMutex
     accountsId   map[string]string
+}
+
+// DoTTLTick does a tick on the TTL cache.
+func (s *AccountService) DoTTLTick() {
+    s.ttlCacheMu.Lock()
+    s.ttlCache.DoTick()
+    s.ttlCacheMu.Unlock()
 }
 
 // LookupById retrieves an account by its ID. It's safe to use this method because
@@ -72,24 +80,20 @@ func (s *AccountService) UnsafeLookupById(id string, keep bool) (*model.Account,
     // but still available in our mongo database.
     // If the account was fetch from database, it will be cached into redis to prevent further database calls in the next 72 hours.
     var (
-        acc *model.Account
-        err error
+        body map[string]interface{}
+        err  error
     )
-    if acc, err = s.lookupAtRedis("ids:", id); err != nil {
+    if body, err = s.redisService.LookupJSON("ids:" + id); err != nil {
         return nil, err
-    } else if acc == nil {
-        acc, err = s.lookupAtMongo("_id", id)
-    }
-
-    if err != nil {
+    } else if body != nil {
+        return s.wrap(body, keep)
+    } else if s.col == nil {
+        return nil, errors.New("service not hooked to the database")
+    } else if err = s.col.FindOne(context.TODO(), bson.D{{"_id", id}}).Decode(&body); err != nil {
         return nil, err
-    } else if acc == nil {
-        return nil, nil
+    } else {
+        return s.wrap(body, keep)
     }
-
-    s.Cache(acc, keep)
-
-    return acc, nil
 }
 
 // UnsafeLookupByName retrieves an account by its name. It's unsafe to use this method because
@@ -100,24 +104,20 @@ func (s *AccountService) UnsafeLookupByName(name string, keep bool) (*model.Acco
     }
 
     var (
-        acc *model.Account
-        err error
+        body map[string]interface{}
     )
-    if acc, err = s.lookupAtRedis("names:", name); err != nil {
+
+    if id, err := s.redisService.LookupString("names:" + strings.ToLower(name)); err != nil {
         return nil, err
-    } else if acc == nil {
-        acc, err = s.lookupAtMongo("name", name)
-    }
-
-    if err != nil {
+    } else if id != "" {
+        return s.UnsafeLookupById(id, keep)
+    } else if s.col == nil {
+        return nil, errors.New("service not hooked to the database")
+    } else if err = s.col.FindOne(context.TODO(), bson.D{{"name", name}}).Decode(&body); err != nil {
         return nil, err
-    } else if acc == nil {
-        return nil, nil
+    } else {
+        return s.wrap(body, keep)
     }
-
-    s.Cache(acc, keep)
-
-    return acc, nil
 }
 
 // UpdateName updates the name of an account.
@@ -128,6 +128,17 @@ func (s *AccountService) UpdateName(oldName, newName, id string) {
     s.accountsId[strings.ToLower(newName)] = id
 
     s.accountsIdMu.Unlock()
+}
+
+func (s *AccountService) wrap(body map[string]interface{}, keep bool) (*model.Account, error) {
+    acc := &model.Account{}
+    if err := acc.Unmarshal(body); err != nil {
+        return nil, err
+    }
+
+    s.Cache(acc, keep)
+
+    return acc, nil
 }
 
 // Cache caches an account.
@@ -166,27 +177,6 @@ func (s *AccountService) Invalidate(acc *model.Account) {
     s.accountsIdMu.Unlock()
 }
 
-// RedisCache caches an account into the Redis database.
-func (s *AccountService) RedisCache(acc *model.Account) error {
-    if common.RedisClient == nil {
-        return errors.New("redis client not found")
-    }
-
-    pip := common.RedisClient.Pipeline()
-    if pip == nil {
-        return errors.New("redis pipeline not found")
-    }
-
-    pip.Set(context.Background(), "primal%ids:"+acc.Id(), acc.MarshalString(), 72*time.Hour)
-    pip.Set(context.Background(), "primal%names:"+strings.ToLower(acc.Name()), acc.MarshalString(), 72*time.Hour)
-
-    if _, err := pip.Exec(context.Background()); err != nil {
-        return err
-    }
-
-    return nil
-}
-
 // Update updates an account.
 func (s *AccountService) Update(acc *model.Account) error {
     if s.col == nil {
@@ -209,43 +199,13 @@ func (s *AccountService) Update(acc *model.Account) error {
         common.Log.Printf("Account %s was updated", acc.Id())
     }
 
-    if err = s.RedisCache(acc); err != nil {
+    if err = s.redisService.StoreJSON("ids:"+acc.Id(), acc.Marshal(), 50*time.Hour); err != nil {
+        return err
+    } else if err = s.redisService.StoreString("names:"+strings.ToLower(acc.Name()), acc.Id(), 50*time.Hour); err != nil {
         return err
     }
 
     return nil
-}
-
-func (s *AccountService) lookupAtRedis(k, v string) (*model.Account, error) {
-    val, err := common.RedisClient.Get(context.Background(), "primal%"+k+v).Result()
-    if errors.Is(err, redis.Nil) {
-        return nil, nil
-    } else if err != nil {
-        return nil, err
-    } else if val == "" {
-        return nil, errors.New("empty value")
-    } else {
-        acc := &model.Account{}
-        if acc.UnmarshalString(val) != nil {
-            return nil, err
-        }
-
-        return acc, nil
-    }
-}
-
-func (s *AccountService) lookupAtMongo(k, v string) (*model.Account, error) {
-    var acc model.Account
-
-    if err := s.col.FindOne(context.TODO(), bson.D{{k, v}}).Decode(&acc); err != nil {
-        if errors.Is(err, mongo.ErrNoDocuments) {
-            return nil, nil
-        }
-
-        return nil, err
-    }
-
-    return &acc, nil
 }
 
 // Hook hooks the account service to the database.
@@ -257,7 +217,7 @@ func (s *AccountService) Hook(db *mongo.Database) error {
     s.col = db.Collection("trackers")
 
     s.ttlCache = quark.New[*model.Account](2*time.Hour, 2*time.Hour)
-    s.ttlCache.SetListener(func(key string, value *model.Account, reason quark.Reason) {
+    s.ttlCache.SetListener(func(_ string, value *model.Account, reason quark.Reason) {
         if reason == quark.ManualReason {
             return
         }
@@ -276,6 +236,7 @@ func Account() *AccountService {
 }
 
 var accountService = &AccountService{
-    accounts:   make(map[string]*model.Account),
-    accountsId: make(map[string]string),
+    accounts:     make(map[string]*model.Account),
+    accountsId:   make(map[string]string),
+    redisService: redis.NewService("primal%"),
 }
