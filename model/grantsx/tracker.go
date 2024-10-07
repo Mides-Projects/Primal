@@ -1,66 +1,86 @@
 package grantsx
 
 import (
-    "sync"
+	"sync"
 )
 
 type Tracker struct {
-    activeMu     sync.RWMutex // Mutex for active grantsx
-    activeGrants []*Grant     // Active grantsx of the account
-
-    expiredMu     sync.RWMutex // Mutex for expired grantsx
-    expiredGrants []*Grant     // Expired grantsx of the account
+	grants []*Grant
+	mu     sync.Mutex
 }
 
 func EmptyTracker() *Tracker {
-    return &Tracker{
-        activeGrants:  make([]*Grant, 0),
-        expiredGrants: make([]*Grant, 0),
-    }
+	return &Tracker{
+		grants: make([]*Grant, 0),
+	}
 }
 
 // ActiveGrants returns the active grantsx of the account.
 func (t *Tracker) ActiveGrants() []*Grant {
-    return t.activeGrants
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	var activeGrants []*Grant
+	for _, g := range t.grants {
+		if g.Expired() {
+			continue
+		}
+
+		activeGrants = append(activeGrants, g)
+	}
+
+	return activeGrants
 }
 
 // AddActiveGrant adds a grant to the account.
 func (t *Tracker) AddActiveGrant(g *Grant) {
-    t.activeMu.Lock()
-    defer t.activeMu.Unlock()
-
-    t.activeGrants = append(t.activeGrants, g)
+	t.mu.Lock()
+	t.grants = append(t.grants, g)
+	t.mu.Unlock()
 }
 
 // ExpiredGrants returns the expired grantsx of the account.
 func (t *Tracker) ExpiredGrants() []*Grant {
-    return t.expiredGrants
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
+	var expiredGrants []*Grant
+	for _, g := range t.grants {
+		if !g.Expired() {
+			continue
+		}
+
+		expiredGrants = append(expiredGrants, g)
+	}
+
+	return expiredGrants
 }
 
 // AddExpiredGrant adds an expired grant to the account.
 func (t *Tracker) AddExpiredGrant(g *Grant) {
-    t.expiredMu.Lock()
-    defer t.expiredMu.Unlock()
-
-    t.expiredGrants = append(t.expiredGrants, g)
+	t.mu.Lock()
+	t.grants = append(t.grants, g)
+	t.mu.Unlock()
 }
 
 // Marshal returns the grants as a map.
 // if filter is "active", only active grants are returned.
 // if filter is empty, all grants are returned.
 func (t *Tracker) Marshal(filter string) []map[string]interface{} {
-    var body []map[string]interface{}
-    for _, g := range t.activeGrants {
-        body = append(body, g.Marshal())
-    }
+	var body []map[string]interface{}
+	if filter == "" {
+		t.mu.Lock()
+		for _, g := range t.grants {
+			body = append(body, g.Marshal())
+		}
+		t.mu.Unlock()
 
-    if filter == "active" {
-        return body
-    }
+		return body
+	}
 
-    for _, g := range t.expiredGrants {
-        body = append(body, g.Marshal())
-    }
+	for _, g := range t.ActiveGrants() {
+		body = append(body, g.Marshal())
+	}
 
-    return body
+	return body
 }

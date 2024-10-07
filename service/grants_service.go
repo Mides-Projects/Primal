@@ -12,11 +12,24 @@ import (
 )
 
 type GrantsService struct {
-	trackersMu   sync.RWMutex
-	lazyTrackers *quark.Quark[*grantsx.Tracker]
-	trackers     map[string]*grantsx.Tracker
+	trackersMu sync.RWMutex
+	trackers   map[string]*grantsx.Tracker
+
+	ttlCache *quark.Quark[*grantsx.Tracker]
 
 	col *mongo.Collection
+}
+
+// Invalidate invalidates a Tracker by its ID.
+// If literal is true, the Tracker will be removed from the trackers map.
+func (s *GrantsService) Invalidate(id string, literal bool) {
+	if literal {
+		s.trackersMu.Lock()
+		delete(s.trackers, id)
+		s.trackersMu.Unlock()
+	} else {
+		s.ttlCache.Invalidate(id)
+	}
 }
 
 // Lookup retrieves a Tracker from the ttlCache by its ID.
@@ -28,7 +41,7 @@ func (s *GrantsService) Lookup(id string) *grantsx.Tracker {
 		return t
 	}
 
-	if t, ok := s.lazyTrackers.Get(id); ok {
+	if t, ok := s.ttlCache.Get(id); ok {
 		return t
 	}
 
@@ -82,7 +95,7 @@ func (s *GrantsService) Cache(id string, t *grantsx.Tracker, keep bool) {
 	if keep {
 		s.trackers[id] = t
 	} else {
-		s.lazyTrackers.Set(id, t)
+		s.ttlCache.Set(id, t)
 	}
 
 	s.trackersMu.Unlock()
@@ -124,6 +137,6 @@ func Grants() *GrantsService {
 }
 
 var grantsService = &GrantsService{
-	lazyTrackers: quark.New[*grantsx.Tracker](time.Hour*2, time.Hour*2),
-	trackers:     make(map[string]*grantsx.Tracker),
+	ttlCache: quark.New[*grantsx.Tracker](time.Hour*2, time.Hour*2),
+	trackers: make(map[string]*grantsx.Tracker),
 }

@@ -4,6 +4,8 @@ import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
 	"github.com/holypvp/primal/model/player"
+	"github.com/holypvp/primal/protocol"
+	"github.com/holypvp/primal/redis"
 	"github.com/holypvp/primal/service"
 	"net/http"
 	"time"
@@ -22,66 +24,74 @@ func HandshakeRoute(c fiber.Ctx) error {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Failed to parse body: " + err.Error(),
 		})
-	}
-
-	if body.ServerName == "" {
+	} else if body.ServerName == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Missing 'server' body field",
 		})
-	}
-
-	if body.Name == "" {
+	} else if body.Name == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Missing 'name' body field",
 		})
 	}
 
-	// TODO: Fix this because I need to let know him if the player already exists or not
-	// if not exists, create a new account
-
-	acc := service.Player().LookupById(id)
-	if acc == nil && body.JoinedBefore {
+	pi := service.Player().LookupById(id)
+	if pi == nil && body.JoinedBefore {
 		return c.Status(http.StatusNotFound).JSON(fiber.Map{
 			"message": "PlayerInfo for " + body.Name + " not found",
 		})
 	}
 
-	empty := acc == nil
-	if acc == nil {
-		acc = player.Empty(id, "")
+	if pi == nil {
+		pi = player.Empty(id, "")
+	} else {
+		service.Player().InvalidateTTL(pi.Id())
 	}
 
-	if acc.Name() != body.Name {
-		oldName := acc.Name()
-		acc.SetLastName(oldName)
-		acc.SetName(body.Name)
+	oldName := pi.Name()
+	if oldName != body.Name {
+		pi.SetLastName(oldName)
+		pi.SetName(body.Name)
 
-		if !empty {
-			service.Player().UpdateName(oldName, body.Name, acc.Id())
+		if oldName != "" {
+			service.Player().UpdateName(oldName, body.Name, id)
 		} else {
-			service.Player().Cache(acc, true)
+			service.Player().Cache(pi, true)
 		}
 
 		go func() {
-			if err := service.Player().Update(acc); err != nil {
+			if err := service.Player().Update(pi); err != nil {
 				common.Log.Fatalf("Failed to update account: %s", err)
 			}
 		}()
 	}
 
-	if !acc.Online() {
-		// TODO: Publish to the redis channel because the player joined!
-	} else if acc.CurrentServer() != body.ServerName {
-		// TODO: Publish to the redis channel because the player switched servers!
+	var packet protocol.Packet
+	if !pi.Online() {
+		packet = &protocol.PlayerJoinedNetwork{
+			Username:   pi.Name(),
+			XUID:       pi.Id(),
+			ServerName: body.ServerName,
+		}
+	} else if pi.CurrentServer() != body.ServerName {
+		packet = &protocol.PlayerChangedServer{
+			Username:      pi.Name(),
+			XUID:          pi.Id(),
+			OldServerName: pi.CurrentServer(),
+			NewServerName: body.ServerName,
+		}
+	}
+
+	if packet != nil {
+		go redis.Publish(packet)
 	}
 
 	// Mark the account as online and set the current server
-	acc.SetCurrentServer(body.ServerName)
-	acc.SetOnline(true)
-	acc.SetLastJoin(time.Now())
+	pi.SetCurrentServer(body.ServerName)
+	pi.SetOnline(true)
+	pi.SetLastJoin(time.Now())
 
 	// Im idiot
-	return c.Status(http.StatusOK).JSON(acc.Marshal())
+	return c.Status(http.StatusOK).JSON(pi.Marshal())
 }
 
 // Hook registers the route to the app

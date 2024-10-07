@@ -22,8 +22,7 @@ type PlayerService struct {
 	playersMu sync.RWMutex
 	players   map[string]*player.PlayerInfo
 
-	ttlCacheMu sync.RWMutex
-	ttlCache   *quark.Quark[*player.PlayerInfo]
+	ttlCache *quark.Quark[*player.PlayerInfo]
 
 	playersNameMu sync.RWMutex
 	playersName   map[string]string
@@ -31,9 +30,7 @@ type PlayerService struct {
 
 // DoTTLTick does a tick on the TTL cache.
 func (s *PlayerService) DoTTLTick() {
-	s.ttlCacheMu.Lock()
 	s.ttlCache.DoTick()
-	s.ttlCacheMu.Unlock()
 }
 
 // LookupById retrieves an account by its ID. It's safe to use this method because
@@ -45,9 +42,6 @@ func (s *PlayerService) LookupById(id string) *player.PlayerInfo {
 	if acc, ok := s.players[id]; ok {
 		return acc
 	}
-
-	s.ttlCacheMu.RLock()
-	defer s.ttlCacheMu.RUnlock()
 
 	if acc, ok := s.ttlCache.Get(id); ok {
 		return acc
@@ -152,9 +146,7 @@ func (s *PlayerService) Cache(pi *player.PlayerInfo, keep bool) {
 		s.players[pi.Id()] = pi
 		s.playersMu.Unlock()
 	} else {
-		s.ttlCacheMu.Lock()
 		s.ttlCache.Set(pi.Id(), pi)
-		s.ttlCacheMu.Unlock()
 	}
 
 	s.playersNameMu.Lock()
@@ -164,9 +156,7 @@ func (s *PlayerService) Cache(pi *player.PlayerInfo, keep bool) {
 
 // Invalidate invalidates an account.
 func (s *PlayerService) Invalidate(acc *player.PlayerInfo) {
-	s.ttlCacheMu.Lock()
 	s.ttlCache.Invalidate(acc.Id())
-	s.ttlCacheMu.Unlock()
 
 	s.playersMu.Lock()
 	delete(s.players, acc.Id())
@@ -175,6 +165,11 @@ func (s *PlayerService) Invalidate(acc *player.PlayerInfo) {
 	s.playersNameMu.Lock()
 	delete(s.playersName, strings.ToLower(acc.Name()))
 	s.playersNameMu.Unlock()
+}
+
+// InvalidateTTL invalidates an account by its ID.
+func (s *PlayerService) InvalidateTTL(id string) {
+	s.ttlCache.Invalidate(id)
 }
 
 // Update updates an account.

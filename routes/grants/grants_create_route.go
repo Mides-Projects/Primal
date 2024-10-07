@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
+	"github.com/holypvp/primal/helper"
 	"github.com/holypvp/primal/model/grantsx"
 	"github.com/holypvp/primal/service"
 	"net/http"
@@ -31,21 +32,21 @@ func CreateRoute(c fiber.Ctx) error {
 		})
 	}
 
-	addrTrack := service.Grants().Lookup(g.AddedBy())
-	if addrTrack == nil {
+	if service.Grants().Lookup(g.AddedBy()) == nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Internal Server: Our system could not find your trackable account",
 		})
 	}
 
-	addrAcc := service.Player().LookupById(g.AddedBy())
-	if addrAcc == nil {
+	// SPI = Source Player Info
+	spi := service.Player().LookupById(g.AddedBy())
+	if spi == nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Internal Server: Our system could not find your account",
 		})
 	}
 
-	if addrAcc.Id() != g.AddedBy() {
+	if spi.Id() != g.AddedBy() {
 		return c.Status(http.StatusConflict).JSON(fiber.Map{
 			"message": "Your ID doest not match with the Player ID",
 		})
@@ -53,55 +54,48 @@ func CreateRoute(c fiber.Ctx) error {
 
 	// Retrieve the account of the player from our redis cache
 	// but if they are online, we can fetch it from the RAM Cache
-	srcAcc, err := service.Player().UnsafeLookupByName(name, false)
+	// TPI = Target Player Info
+	tpi, err := service.Player().UnsafeLookupByName(name, false)
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"message": "Internal Server: " + err.Error(),
 		})
-	} else if srcAcc == nil {
+	} else if tpi == nil {
 		return c.Status(http.StatusNotFound).JSON(fiber.Map{
-			"message": "We could not find the account you are looking for",
+			"message": "We could not find the player you are looking for",
 		})
 	}
 
-	srcTracker, err := service.Grants().UnsafeLookup(srcAcc.Id(), false)
-	if err != nil {
+	if track, err := service.Grants().UnsafeLookup(tpi.Id(), false); err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Internal Server Error: " + err.Error(),
+			"message": "Internal Server: " + err.Error(),
+		})
+	} else if track == nil {
+		return c.Status(http.StatusNotFound).JSON(fiber.Map{
+			"message": "We could not find the player you are looking for",
 		})
 	}
 
-	if srcTracker == nil {
-		panic("The 'source' cannot be have nil tracker...")
-	}
-
-	if !addrAcc.Operator() {
-		if srcAcc.Operator() {
+	if !spi.Operator() {
+		if tpi.Operator() {
 			return c.Status(http.StatusUnauthorized).JSON(fiber.Map{
-				"message": fmt.Sprintf("You cannot add a grant to %s because they are an operator", srcAcc.DisplayName()),
+				"message": fmt.Sprintf("You cannot add a grant to %s because they are an operator", tpi.DisplayName()),
 				"code":    http.StatusUnauthorized,
 			})
-		}
-
-		hgAdder := service.Groups().LookupById(addrAcc.HighestGroup())
-		if hgAdder == nil {
-			return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-				"message": "An error occurred while trying to lookup your highest group",
-				"code":    http.StatusBadRequest,
+		} else if ok, err := helper.HighestThan(spi.HighestGroup(), tpi.HighestGroup()); err != nil {
+			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Internal Server Error: " + err.Error(),
 			})
-		}
-
-		hg := service.Groups().LookupById(srcAcc.HighestGroup())
-		if hg != nil && hg.Weight() > hgAdder.Weight() {
+		} else if !ok {
 			return c.Status(http.StatusUnauthorized).JSON(fiber.Map{
-				"message": fmt.Sprintf("You cannot add a grant to %s because they have a higher group than you", srcAcc.DisplayName()),
+				"message": fmt.Sprintf("You cannot add a grant to %s because they have a higher group than you", tpi.DisplayName()),
 				"code":    http.StatusUnauthorized,
 			})
 		}
 	}
 
 	go func() {
-		if err = service.Grants().Save(srcAcc.Id(), g); err != nil {
+		if err = service.Grants().Save(tpi.Id(), g); err != nil {
 			common.Log.Fatalf("Failed to save grant: %v", err)
 		}
 	}()
