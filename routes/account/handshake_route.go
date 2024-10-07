@@ -3,7 +3,7 @@ package account
 import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
-	"github.com/holypvp/primal/model"
+	"github.com/holypvp/primal/model/player"
 	"github.com/holypvp/primal/service"
 	"net/http"
 	"time"
@@ -17,62 +17,53 @@ func HandshakeRoute(c fiber.Ctx) error {
 		})
 	}
 
-	var body map[string]interface{}
+	var body player.HandshakeBodyRequest
 	if err := c.Bind().Body(&body); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Failed to parse body: " + err.Error(),
 		})
 	}
 
-	serverName, ok := body["server"].(string)
-	if !ok || serverName == "" {
+	if body.ServerName == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Missing 'server' body field",
 		})
 	}
 
-	name, ok := body["name"].(string)
-	if !ok || name == "" {
+	if body.Name == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Missing 'name' body field",
-		})
-	}
-
-	exists := c.Query("exists")
-	if exists == "" {
-		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
-			"message": "Missing 'exists' query parameter",
 		})
 	}
 
 	// TODO: Fix this because I need to let know him if the player already exists or not
 	// if not exists, create a new account
 
-	acc := service.Account().LookupById(id)
-	if acc == nil && exists == "true" {
+	acc := service.Player().LookupById(id)
+	if acc == nil && body.JoinedBefore {
 		return c.Status(http.StatusNotFound).JSON(fiber.Map{
-			"message": "Account for " + name + " not found",
+			"message": "PlayerInfo for " + body.Name + " not found",
 		})
 	}
 
 	empty := acc == nil
 	if acc == nil {
-		acc = model.Empty(id, "")
+		acc = player.Empty(id, "")
 	}
 
-	if acc.Name() != name {
+	if acc.Name() != body.Name {
 		oldName := acc.Name()
 		acc.SetLastName(oldName)
-		acc.SetName(name)
+		acc.SetName(body.Name)
 
 		if !empty {
-			service.Account().UpdateName(oldName, name, acc.Id())
+			service.Player().UpdateName(oldName, body.Name, acc.Id())
 		} else {
-			service.Account().Cache(acc)
+			service.Player().Cache(acc, true)
 		}
 
 		go func() {
-			if err := service.Account().Update(acc); err != nil {
+			if err := service.Player().Update(acc); err != nil {
 				common.Log.Fatalf("Failed to update account: %s", err)
 			}
 		}()
@@ -80,12 +71,12 @@ func HandshakeRoute(c fiber.Ctx) error {
 
 	if !acc.Online() {
 		// TODO: Publish to the redis channel because the player joined!
-	} else if acc.CurrentServer() != serverName {
+	} else if acc.CurrentServer() != body.ServerName {
 		// TODO: Publish to the redis channel because the player switched servers!
 	}
 
 	// Mark the account as online and set the current server
-	acc.SetCurrentServer(serverName)
+	acc.SetCurrentServer(body.ServerName)
 	acc.SetOnline(true)
 	acc.SetLastJoin(time.Now())
 

@@ -3,6 +3,7 @@ package account
 import (
 	"github.com/gofiber/fiber/v3"
 	"github.com/holypvp/primal/common"
+	"github.com/holypvp/primal/model/player"
 	"github.com/holypvp/primal/service"
 	"net/http"
 	"sync/atomic"
@@ -16,14 +17,14 @@ func QuitRoute(c fiber.Ctx) error {
 		})
 	}
 
-	acc := service.Account().LookupById(id)
+	acc := service.Player().LookupById(id)
 	if acc == nil || !acc.Online() {
 		return c.Status(http.StatusServiceUnavailable).JSON(fiber.Map{
 			"message": "You are not logged in",
 		})
 	}
 
-	var body map[string]interface{}
+	var body player.UpdateBodyRequest
 	if err := c.Bind().Body(&body); err != nil {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Failed to parse body: " + err.Error(),
@@ -34,47 +35,44 @@ func QuitRoute(c fiber.Ctx) error {
 	state.Store(true)
 	defer acc.SetOnline(state.Load())
 
-	displayName, ok := body["display_name"].(string)
-	if !ok || displayName == "" {
+	if body.DisplayName == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Missing 'display_name' body field",
 		})
 	}
 
-	highestGroup, ok := body["highest_group"].(string)
-	if !ok || highestGroup == "" {
+	if body.HighestGroup == "" {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Missing 'highest_group' body field",
 		})
 	}
 
-	timestamp, ok := body["timestamp"].(float64)
-	if !ok || timestamp == 0 {
+	if body.Timestamp == 0 {
 		return c.Status(http.StatusBadRequest).JSON(fiber.Map{
 			"message": "Missing 'timestamp' body field",
 		})
 	}
 
 	canBeUpdated := false
-	if acc.DisplayName() != displayName {
-		acc.SetDisplayName(displayName)
+	if acc.DisplayName() != body.DisplayName {
+		acc.SetDisplayName(body.DisplayName)
 		canBeUpdated = true
 	}
 
-	if acc.HighestGroup() != highestGroup {
-		acc.SetHighestGroup(highestGroup)
+	if acc.HighestGroup() != body.HighestGroup {
+		acc.SetHighestGroup(body.HighestGroup)
 		canBeUpdated = true
 	}
 
 	if canBeUpdated {
 		go func() {
-			if err := service.Account().Update(acc); err != nil {
+			if err := service.Player().Update(acc); err != nil {
 				common.Log.Fatalf("Failed to update account: %v", err)
 			}
 		}()
 	}
 
-	if int64(timestamp) > acc.LastJoin().UnixMilli() {
+	if body.Timestamp > acc.LastJoin().UnixMilli() {
 		common.Log.Print("Player was disconnected due to a timestamp mismatch")
 	} else {
 		state.Store(false) // The state change to false because the player not was disconnected
