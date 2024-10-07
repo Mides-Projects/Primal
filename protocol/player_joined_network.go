@@ -9,7 +9,7 @@ type PlayerJoinedNetwork struct {
 
 // ShieldId returns the packet ID.
 func (pk *PlayerJoinedNetwork) ShieldId() int32 {
-	return 0x00
+	return PlayerJoinNetworkPacket
 }
 
 // Unmarshal unmarshals the object from the given IO.

@@ -1,5 +1,13 @@
 package protocol
 
+const (
+	PlayerJoinNetworkPacket int32 = iota
+	PlayerChangeServerPacket
+	PlayerLeaveNetworkPacket
+)
+
+type ShieldId int32
+
 type Packet interface {
 	// ShieldId returns the packet ID.
 	ShieldId() int32
