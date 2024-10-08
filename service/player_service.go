@@ -33,6 +33,21 @@ func (s *PlayerService) DoTTLTick() {
 	s.ttlCache.DoTick()
 }
 
+func (s *PlayerService) Lookup(l model.Lookup) *player.PlayerInfo {
+	v := l.Value()
+	if l.Key() == "name" {
+		s.playersXuidMu.Lock()
+		defear s.playersXuidMu.Unlock()
+		if id, ok := s.playersXuid[v]; !ok {
+			return nil
+		} else {
+			v = id
+		}
+	}
+
+	// TODO: Lookup at players
+}
+
 // LookupById retrieves an account by its ID. It's safe to use this method because
 // it's only reading the map.
 func (s *PlayerService) LookupById(id string) *player.PlayerInfo {
